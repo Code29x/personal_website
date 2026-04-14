@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vivek Sharma | Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Galaxy Canvas -->
+<canvas id="galaxy-canvas"></canvas>
+
+<!-- Particles -->
+<div id="particles-container"></div>
+
+<!-- Navigation -->
+<nav id="navbar">
+  <a href="#hero" class="nav-logo">VS</a>
+  <a href="#hero" class="active">Home</a>
+  <a href="#about">About</a>
+  <a href="#skills">Skills</a>
+  <a href="#projects">Projects</a>
+  <a href="#certificates">Certificates</a>
+  <a href="#contact">Contact</a>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section id="hero">
+  <div class="hero-inner">
+    <div class="profile-orbit">
+      <div class="orbit-ring"><span class="orbit-dot"></span></div>
+      <div class="orbit-ring"><span class="orbit-dot"></span></div>
+      <div class="orbit-ring"><span class="orbit-dot"></span></div>
+      <div class="profile-glow"></div>
+      <div class="profile-circle">
+        <div class="profile-circle-inner">
+          <span class="profile-initials">VS</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-text">
+      <p class="hero-greeting">✦ Welcome to my universe ✦</p>
+      <h1 class="hero-name">
+        <span class="name-vivek">Vivek</span>
+        <span class="name-sharma">Sharma</span>
+      </h1>
+      <p class="hero-role">Computer Science Engineer</p>
+      <p class="hero-sub">Lovely Professional University · Full Stack Developer</p>
+    </div>
+
+    <div class="hero-btns">
+      <a href="#projects" class="btn-primary">View Projects</a>
+      <a href="#contact" class="btn-secondary">Get In Touch</a>
+    </div>
+  </div>
+
+  <div class="scroll-indicator">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── ABOUT ─── -->
+<section id="about">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">// who am i</p>
+      <h2 class="section-title">About Me</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="glass-card about-card reveal">
+      <div class="about-content">
+        <div class="about-text">
+          <p>Hi, I'm <span class="highlight">Vivek Sharma</span>, a Computer Science Engineering student at <span class="highlight">Lovely Professional University</span>. I am passionate about building practical and user-friendly applications that solve real-world problems.</p>
+          <p>I started my journey with <span class="highlight">C and Python</span>, and I enjoy understanding how systems work behind the scenes. I prefer writing clean, minimal, and efficient code that works correctly in one go.</p>
+          <p>Currently, I am focused on strengthening my fundamentals in <span class="highlight">programming, databases, and software development</span> while building more real-world projects.</p>
+        </div>
+        <div class="about-stats">
+          <div class="stat-item">
+            <div class="stat-number">1+</div>
+            <div class="stat-label">Projects</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">3+</div>
+            <div class="stat-label">Languages</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">LPU</div>
+            <div class="stat-label">University</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">CSE</div>
+            <div class="stat-label">Major</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── SKILLS ─── -->
+<section id="skills">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">// tech stack</p>
+      <h2 class="section-title">Skills</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="skills-grid">
+      <div class="glass-card skill-card green reveal">
+        <div class="skill-card-header">
+          <div class="skill-icon"><i class="fas fa-code"></i></div>
+          <h3 class="skill-card-title">Languages</h3>
+        </div>
+        <div class="skill-tags">
+          <span class="skill-tag">C</span>
+          <span class="skill-tag">Python</span>
+          <span class="skill-tag">JavaScript</span>
+          <span class="skill-tag">HTML5</span>
+          <span class="skill-tag">CSS3</span>
+        </div>
+      </div>
+
+      <div class="glass-card skill-card blue reveal">
+        <div class="skill-card-header">
+          <div class="skill-icon"><i class="fas fa-layer-group"></i></div>
+          <h3 class="skill-card-title">Concepts</h3>
+        </div>
+        <div class="skill-tags">
+          <span class="skill-tag">Pointers</span>
+          <span class="skill-tag">Functions</span>
+          <span class="skill-tag">Basic DSA</span>
+          <span class="skill-tag">Problem Solving</span>
+          <span class="skill-tag">DOM</span>
+        </div>
+      </div>
+
+      <div class="glass-card skill-card pink reveal">
+        <div class="skill-card-header">
+          <div class="skill-icon"><i class="fas fa-tools"></i></div>
+          <h3 class="skill-card-title">Tools</h3>
+        </div>
+        <div class="skill-tags">
+          <span class="skill-tag">VS Code</span>
+          <span class="skill-tag">Browser DevTools</span>
+          <span class="skill-tag">Git</span>
+          <span class="skill-tag">GitHub</span>
+        </div>
+      </div>
+
+      <div class="glass-card skill-card yellow reveal">
+        <div class="skill-card-header">
+          <div class="skill-icon" style="background:rgba(255,238,0,0.15);color:var(--neon-yellow)"><i class="fas fa-brain"></i></div>
+          <h3 class="skill-card-title">Soft Skills</h3>
+        </div>
+        <div class="skill-tags" style="--neon-yellow:#ffee00;">
+          <span class="skill-tag" style="color:var(--neon-yellow);border-color:rgba(255,238,0,0.3)">Consistency</span>
+          <span class="skill-tag" style="color:var(--neon-yellow);border-color:rgba(255,238,0,0.3)">Learning Mindset</span>
+          <span class="skill-tag" style="color:var(--neon-yellow);border-color:rgba(255,238,0,0.3)">Problem Solving</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── PROJECTS ─── -->
+<section id="projects">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">// what i built</p>
+      <h2 class="section-title">Projects</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="projects-grid">
+      <div class="glass-card project-card reveal">
+        <div class="project-header">
+          <div>
+            <p class="project-num">01 · FEATURED</p>
+            <h3 class="project-title">Student Marks Portal</h3>
+          </div>
+          <div class="project-tech-badge">
+            <span class="tech-badge" style="background:rgba(255,102,0,0.15);color:#ff6600;border:1px solid rgba(255,102,0,0.3)">HTML</span>
+            <span class="tech-badge" style="background:rgba(0,122,255,0.15);color:#007aff;border:1px solid rgba(0,122,255,0.3)">CSS</span>
+            <span class="tech-badge" style="background:rgba(255,238,0,0.15);color:#ffee00;border:1px solid rgba(255,238,0,0.3)">JS</span>
+          </div>
+        </div>
+        <p class="project-desc">A responsive web application where students can log in and view their academic records dynamically. Features a marks search system using registration number and an admin view for all student records.</p>
+        <ul class="project-features">
+          <li>Responsive web application</li>
+          <li>Login functionality</li>
+          <li>Dynamic data display</li>
+          <li>Marks search by Reg. No.</li>
+          <li>Admin view — all records</li>
+          <li>DOM manipulation & events</li>
+          <li>Clean responsive UI</li>
+          <li>JavaScript-powered logic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── CERTIFICATES ─── -->
+<section id="certificates">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">// continuous learning</p>
+      <h2 class="section-title">Certificates</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="certificates-grid">
+      <div class="glass-card cert-card reveal">
+        <div class="cert-image-container">
+          <img src="../certificates/cert-infosys-react.jpg" alt="Web Development Basics" class="cert-img" onerror="this.src='https://via.placeholder.com/400x250/1a1a2e/00ff88?text=Web+Development'">
+        </div>
+        <div class="cert-content">
+          <h3 class="cert-title">Web Development Basics</h3>
+          <p class="cert-org">Infosys Springboard</p>
+          <p class="cert-desc">HTML, CSS, JavaScript project-based learning. Built fundamental understanding of DOM and styling.</p>
+          <button onclick="openLightbox('../certificates/cert-infosys-react.jpg', 'Web Development Basics', 'August 2025', 'HTML, CSS, JavaScript project-based learning. Built fundamental understanding of DOM and styling.')" class="btn-primary btn-sm">View Certificate</button>
+        </div>
+      </div>
+
+      <div class="glass-card cert-card reveal">
+        <div class="cert-image-container">
+          <img src="../certificates/cert-infosys-devops.jpg" alt="Python Basics" class="cert-img" onerror="this.src='https://via.placeholder.com/400x250/1a1a2e/00d4ff?text=Python'">
+        </div>
+        <div class="cert-content">
+          <h3 class="cert-title">Python Basics</h3>
+          <p class="cert-org">TutorialsPoint</p>
+          <p class="cert-desc">Learned fundamentals of Python programming including data structures, logic flow, and basic algorithms.</p>
+          <button onclick="openLightbox('../certificates/cert-infosys-devops.jpg', 'Python Basics', 'March 2025', 'Learned fundamentals of Python programming including data structures, logic flow, and basic algorithms.')" class="btn-primary btn-sm">View Certificate</button>
+        </div>
+      </div>
+
+      <div class="glass-card cert-card reveal">
+        <div class="cert-image-container">
+          <img src="../certificates/cert-hp-life.jpg" alt="C Programming" class="cert-img" onerror="this.src='https://via.placeholder.com/400x250/1a1a2e/ff006e?text=C+Programming'">
+        </div>
+        <div class="cert-content">
+          <h3 class="cert-title">C Programming</h3>
+          <p class="cert-org">HP Life / Online</p>
+          <p class="cert-desc">Core concepts like pointers, functions, and memory handling. Built a strong foundation in low-level programming.</p>
+          <button onclick="openLightbox('../certificates/cert-hp-life.jpg', 'C Programming', 'November 2024', 'Core concepts like pointers, functions, and memory handling. Built a strong foundation in low-level programming.')" class="btn-primary btn-sm">View Certificate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ─── CONTACT ─── -->
+<section id="contact">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">// let's connect</p>
+      <h2 class="section-title">Contact</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="glass-card contact-card reveal">
+      <div class="contact-content-wrapper">
+        <div class="contact-info-section">
+          <p class="contact-intro">I'm always open to new opportunities, collaborations, and conversations. Reach out and let's build something amazing together!</p>
+          <div class="contact-email liquid-text">viveksharmacse@lpu.in</div>
+          <div class="social-grid">
+            <a href="https://www.linkedin.com/in/vivek-sharma-2bba8b398/" target="_blank" class="social-btn linkedin"><i class="fab fa-linkedin-in social-icon"></i><span>LinkedIn</span></a>
+            <a href="https://github.com/vivekcyr25" target="_blank" class="social-btn github"><i class="fab fa-github social-icon"></i><span>GitHub</span></a>
+            <a href="https://instagram.com" target="_blank" class="social-btn instagram"><i class="fab fa-instagram social-icon"></i><span>Instagram</span></a>
+            <a href="mailto:viveklpu008@gmail.com" class="social-btn email-btn"><i class="fas fa-envelope social-icon"></i><span>Email</span></a>
+          </div>
+        </div>
+
+        <div class="contact-form-section">
+          <form id="contact-form" onsubmit="handleContactSubmit(event)">
+            <div class="form-group">
+              <label for="contact-name">Your Name</label>
+              <input type="text" id="contact-name" name="name" placeholder="John Doe" required>
+            </div>
+            <div class="form-group">
+              <label for="contact-email">Your Email</label>
+              <input type="email" id="contact-email" name="email" placeholder="john@example.com" required>
+            </div>
+            <div class="form-group">
+              <label for="contact-message">Your Message</label>
+              <textarea id="contact-message" name="message" rows="5" placeholder="How can I help you?" required></textarea>
+            </div>
+            <button type="submit" class="btn-primary form-submit-btn" id="submit-btn-text">
+              <span>Send Message</span> <i class="fas fa-paper-plane"></i>
+            </button>
+            <div id="form-status" class="form-status"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="modern-footer">
+  <div class="container footer-container">
+    <div class="footer-brand">
+      <h3>Vivek Sharma</h3>
+      <p>Computer Science Engineer</p>
+    </div>
+    <div class="footer-links">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-socials">
+      <h4>Connect</h4>
+      <div class="footer-social-icons">
+        <a href="https://www.linkedin.com/in/vivek-sharma-2bba8b398/" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+        <a href="https://github.com/vivekcyr25" target="_blank"><i class="fab fa-github"></i></a>
+        <a href="https://instagram.com" target="_blank"><i class="fab fa-instagram"></i></a>
+        <a href="mailto:viveklpu008@gmail.com"><i class="fas fa-envelope"></i></a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&#169; Vivek Sharma 2026 | All Rights Reserved</p>
+  </div>
+</footer>
+
+<!-- ─── AI CHATBOT ─── -->
+<div id="chatbot-container">
+  <button id="chatbot-toggle" class="chatbot-toggle">
+    <i class="fas fa-robot"></i>
+  </button>
+  
+  <div class="chatbot-window" id="chatbot-window">
+    <div class="chatbot-header">
+      <div class="chatbot-title">
+        <i class="fas fa-robot"></i> Vivek AI Assistant
+      </div>
+      <button id="chatbot-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="chatbot-messages" id="chatbot-messages">
+      <div class="message bot-message">Hi! I am Vivek's AI Assistant. How can I help you today?</div>
+    </div>
+    <div class="chatbot-quick-actions">
+      <button class="quick-btn" onclick="sendQuickMessage('Who is Vivek?')">Who is Vivek?</button>
+      <button class="quick-btn" onclick="sendQuickMessage('View Projects')">View Projects</button>
+      <button class="quick-btn" onclick="sendQuickMessage('Skills')">Skills</button>
+      <button class="quick-btn" onclick="sendQuickMessage('Contact Vivek')">Contact Vivek</button>
+    </div>
+    <div class="chatbot-input">
+      <input type="text" id="chat-input-field" placeholder="Ask me something..." onkeypress="handleChatEnter(event)">
+      <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── LIGHTBOX MODAL ─── -->
+<div id="lightbox-modal" class="lightbox" onclick="closeLightbox(event)">
+  <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+  <div class="lightbox-wrapper">
+    <img class="lightbox-content" id="lightbox-img">
+    <div id="lightbox-info" class="lightbox-info">
+      <h3 id="lightbox-title"></h3>
+      <p id="lightbox-date" class="lightbox-date"></p>
+      <p id="lightbox-desc" class="lightbox-desc"></p>
+    </div>
+  </div>
+</div>
+
+<script src="main.js">
+</script>
+</body>
+</html>
