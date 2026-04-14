@@ -661,17 +661,38 @@ const chatbotWindow = document.getElementById('chatbot-window');
 const chatbotClose = document.getElementById('chatbot-close');
 const chatMessages = document.getElementById('chatbot-messages');
 const chatInput = document.getElementById('chat-input-field');
+let chatbotIdleTimer = null;
+const CHATBOT_IDLE_MS = 15000;
+
+function closeChatbot() {
+  chatbotWindow.classList.remove('open');
+  chatbotToggle.style.transform = 'scale(1)';
+}
+
+function resetChatbotIdleTimer() {
+  if (chatbotIdleTimer) clearTimeout(chatbotIdleTimer);
+  chatbotIdleTimer = setTimeout(() => {
+    closeChatbot();
+  }, CHATBOT_IDLE_MS);
+}
 
 chatbotToggle.addEventListener('click', () => {
-  chatbotWindow.classList.add('open');
   chatbotToggle.style.transform = 'scale(0)';
-  setTimeout(() => chatInput.focus(), 300);
+  // Pop up again after 0.2s as requested.
+  setTimeout(() => {
+    chatbotWindow.classList.add('open');
+    chatInput.focus();
+    resetChatbotIdleTimer();
+  }, 200);
 });
 
 chatbotClose.addEventListener('click', () => {
-  chatbotWindow.classList.remove('open');
-  chatbotToggle.style.transform = 'scale(1)';
+  closeChatbot();
 });
+
+chatbotWindow.addEventListener('mousemove', resetChatbotIdleTimer);
+chatbotWindow.addEventListener('click', resetChatbotIdleTimer);
+chatbotWindow.addEventListener('keydown', resetChatbotIdleTimer);
 
 function appendMessage(text, sender) {
   const msgDiv = document.createElement('div');
@@ -695,6 +716,7 @@ function sendQuickMessage(text) {
 function sendChatMessage() {
   const val = chatInput.value.trim();
   if (!val) return;
+  resetChatbotIdleTimer();
   
   // Append User message
   appendMessage(val, 'user');
