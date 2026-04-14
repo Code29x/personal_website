@@ -25,6 +25,44 @@ function animCursor() {
 }
 animCursor();
 
+/* ─── HERO TYPEWRITER ─── */
+const heroTypewriter = document.getElementById('hero-typewriter');
+if (heroTypewriter) {
+  const typePhrases = ['Vivek Sharma', 'Aspiring Software Developer'];
+  const typingSpeed = 90;
+  const pauseAfterType = 280; // 0.28 second delay
+  const pauseAfterDelete = 140;
+
+  let phraseIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+
+  function runTypewriter() {
+    const current = typePhrases[phraseIndex];
+
+    if (!isDeleting) {
+      charIndex++;
+      heroTypewriter.textContent = current.slice(0, charIndex);
+      if (charIndex === current.length) {
+        isDeleting = true;
+        setTimeout(runTypewriter, pauseAfterType);
+        return;
+      }
+      setTimeout(runTypewriter, typingSpeed);
+      return;
+    }
+
+    // Cover/clear the whole sentence in one shot (no letter-by-letter delete).
+    heroTypewriter.textContent = '';
+    charIndex = 0;
+    isDeleting = false;
+    phraseIndex = (phraseIndex + 1) % typePhrases.length;
+    setTimeout(runTypewriter, pauseAfterDelete);
+  }
+
+  runTypewriter();
+}
+
 document.querySelectorAll('a, button, .skill-card, .project-card, .stat-item').forEach(el => {
   el.addEventListener('mouseenter', () => {
     cursor.style.width = '24px';
@@ -53,15 +91,20 @@ resize();
 window.addEventListener('resize', resize);
 
 // Stars
-const STAR_COUNT = 800;
+const STAR_COUNT = 1350;
+const STAR_INTERACTION_RADIUS = 170;
 const stars = Array.from({length: STAR_COUNT}, () => ({
   x: Math.random() * 2000 - 1000,
   y: Math.random() * 2000 - 1000,
   z: Math.random() * 2000,
-  size: Math.random() * 2 + 0.3,
-  color: ['#fff','#aef','#ffa','#faf','#aff'][Math.floor(Math.random()*5)],
+  size: Math.random() * 0.75 + 0.08,
+  color: ['#ffffff','#f4f8ff','#e8f0ff','#fff6df','#dff4ff'][Math.floor(Math.random()*5)],
   twinkle: Math.random() * Math.PI * 2,
   twinkleSpeed: 0.02 + Math.random() * 0.03,
+  driftX: (Math.random() - 0.5) * 0.2,
+  driftY: (Math.random() - 0.5) * 0.2,
+  offsetX: 0,
+  offsetY: 0,
 }));
 
 // Nebula clouds
@@ -77,11 +120,32 @@ const nebulae = Array.from({length: 6}, (_, i) => ({
 
 // Planets
 const planets = [
-  { x: W * 0.15, y: H * 0.25, r: 40, color: '#00ff88', ringColor: 'rgba(0,255,136,0.3)', ring: true, vx: 0.03, vy: 0.02, glow: '#00ff88' },
-  { x: W * 0.85, y: H * 0.6, r: 28, color: '#ff006e', ring: false, vx: -0.04, vy: 0.015, glow: '#ff006e' },
-  { x: W * 0.75, y: H * 0.15, r: 18, color: '#00d4ff', ring: false, vx: 0.02, vy: -0.03, glow: '#00d4ff' },
-  { x: W * 0.1, y: H * 0.75, r: 22, color: '#ffee00', ring: false, vx: 0.035, vy: -0.02, glow: '#ffee00' },
+  {
+    x: W * 0.15, y: H * 0.25, r: 58, color: '#78a1b3', ringColor: 'rgba(210,225,235,0.34)',
+    ring: true, ringTilt: 0.34, ringRotation: 0, ringSpeed: 0.006, ringBands: 3,
+    vx: 0.03, vy: 0.02, glow: '#9fc7db'
+  },
+  { x: W * 0.85, y: H * 0.6, r: 42, color: '#b07a63', ring: false, vx: -0.04, vy: 0.015, glow: '#d59c82' },
+  {
+    x: W * 0.75, y: H * 0.15, r: 30, color: '#7f90a8', ring: true, ringColor: 'rgba(190,206,226,0.3)',
+    ringTilt: 0.5, ringRotation: Math.PI / 4, ringSpeed: -0.01, ringBands: 2,
+    vx: 0.02, vy: -0.03, glow: '#a8b7cc'
+  },
+  { x: W * 0.1, y: H * 0.75, r: 34, color: '#9a8f6b', ring: false, vx: 0.035, vy: -0.02, glow: '#c5b88e' },
+  { x: W * 0.62, y: H * 0.78, r: 26, color: '#7f6a7a', ring: false, vx: -0.022, vy: 0.018, glow: '#b094a9' },
+  {
+    x: W * 0.28, y: H * 0.12, r: 24, color: '#6e8b79', ring: true, ringColor: 'rgba(188,210,198,0.3)',
+    ringTilt: 0.62, ringRotation: Math.PI / 3, ringSpeed: 0.008, ringBands: 2,
+    vx: 0.018, vy: 0.02, glow: '#98b8a5'
+  },
 ];
+planets.forEach((p) => {
+  p.homeX = p.x;
+  p.homeY = p.y;
+  p.motionVX = 0;
+  p.motionVY = 0;
+  p.textureSeed = Math.random() * 1000;
+});
 
 // Shooting stars
 let shootingStars = [];
@@ -100,16 +164,79 @@ setInterval(spawnShootingStar, 3000);
 
 let t = 0;
 let mouseX = W/2, mouseY = H/2;
-window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+let isMouseActive = false;
+let mouseIdleTimer = null;
+let isStarHoldActive = false;
+let activePlanet = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let lastDragX = 0;
+let lastDragY = 0;
+let lastDragTs = 0;
+let throwVX = 0;
+let throwVY = 0;
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  isMouseActive = true;
+  if (mouseIdleTimer) clearTimeout(mouseIdleTimer);
+  mouseIdleTimer = setTimeout(() => {
+    isMouseActive = false;
+  }, 120);
+
+  if (activePlanet) {
+    const now = performance.now();
+    const dt = Math.max(1, now - lastDragTs);
+    const nx = e.clientX + dragOffsetX;
+    const ny = e.clientY + dragOffsetY;
+    throwVX = (nx - lastDragX) / dt * 16;
+    throwVY = (ny - lastDragY) / dt * 16;
+    activePlanet.x = nx;
+    activePlanet.y = ny;
+    lastDragX = nx;
+    lastDragY = ny;
+    lastDragTs = now;
+  }
+});
+window.addEventListener('mousedown', (e) => {
+  isStarHoldActive = true;
+  let nearest = null;
+  let minDist = Infinity;
+  planets.forEach((p) => {
+    const dx = p.x - e.clientX;
+    const dy = p.y - e.clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < p.r * 1.6 && dist < minDist) {
+      nearest = p;
+      minDist = dist;
+    }
+  });
+  if (!nearest) return;
+  activePlanet = nearest;
+  dragOffsetX = nearest.x - e.clientX;
+  dragOffsetY = nearest.y - e.clientY;
+  lastDragX = nearest.x;
+  lastDragY = nearest.y;
+  lastDragTs = performance.now();
+  throwVX = 0;
+  throwVY = 0;
+});
+window.addEventListener('mouseup', () => {
+  isStarHoldActive = false;
+  if (!activePlanet) return;
+  activePlanet.motionVX = throwVX;
+  activePlanet.motionVY = throwVY;
+  activePlanet = null;
+});
 
 function drawGalaxy() {
   ctx.clearRect(0, 0, W, H);
 
   // Space gradient
   const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H));
-  bg.addColorStop(0, '#020818');
-  bg.addColorStop(0.4, '#010510');
-  bg.addColorStop(1, '#000');
+  bg.addColorStop(0, '#09235a');
+  bg.addColorStop(0.45, '#04143c');
+  bg.addColorStop(1, '#020b24');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -149,41 +276,115 @@ function drawGalaxy() {
   }
 
   // Stars (starfield with perspective)
-  const speed = 0.5;
+  const speed = 0.26;
+  const maxDepth = 4200;
   stars.forEach(s => {
     s.z -= speed;
-    if (s.z <= 0) s.z = 2000;
+    if (s.z <= 0) {
+      s.z = maxDepth;
+      s.x = Math.random() * 2400 - 1200;
+      s.y = Math.random() * 2400 - 1200;
+    }
     s.twinkle += s.twinkleSpeed;
-    const px = (s.x / s.z) * W + W / 2;
-    const py = (s.y / s.z) * H + H / 2;
+    s.x += s.driftX;
+    s.y += s.driftY;
+    if (s.x < -1000 || s.x > 1000) s.driftX *= -1;
+    if (s.y < -1000 || s.y > 1000) s.driftY *= -1;
+
+    let px = (s.x / s.z) * W + W / 2 + s.offsetX;
+    let py = (s.y / s.z) * H + H / 2 + s.offsetY;
     if (px < 0 || px > W || py < 0 || py > H) return;
-    const brightness = (1 - s.z / 2000);
+
+    if (isStarHoldActive) {
+      const holdDx = mouseX - px;
+      const holdDy = mouseY - py;
+      const holdDist = Math.sqrt(holdDx * holdDx + holdDy * holdDy) || 1;
+      const holdRadius = STAR_INTERACTION_RADIUS * 2.4;
+      if (holdDist < holdRadius) {
+        const pull = (holdRadius - holdDist) / holdRadius;
+        s.offsetX += (holdDx / holdDist) * pull * 4.4;
+        s.offsetY += (holdDy / holdDist) * pull * 4.4;
+        px += (holdDx / holdDist) * pull * 1.1;
+        py += (holdDy / holdDist) * pull * 1.1;
+      }
+    } else if (isMouseActive) {
+      const dx = px - mouseX;
+      const dy = py - mouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (dist < STAR_INTERACTION_RADIUS) {
+        const force = (STAR_INTERACTION_RADIUS - dist) / STAR_INTERACTION_RADIUS;
+        s.offsetX += (dx / dist) * force * 2.8;
+        s.offsetY += (dy / dist) * force * 2.8;
+      }
+    }
+
+    // Ease stars back to their normal path when cursor is away.
+    s.offsetX *= isStarHoldActive ? 0.9 : 0.94;
+    s.offsetY *= isStarHoldActive ? 0.9 : 0.94;
+
+    const brightness = Math.max(0, 1 - s.z / maxDepth);
     const twinkleAlpha = 0.5 + 0.5 * Math.sin(s.twinkle);
-    const size = brightness * s.size * 2;
+    const size = Math.max(0.09, brightness * s.size * 2.4);
+    const glowSize = size * (2.4 + brightness * 2.4);
+
+    ctx.beginPath();
+    ctx.arc(px, py, glowSize, 0, Math.PI * 2);
+    ctx.fillStyle = s.color;
+    ctx.globalAlpha = brightness * twinkleAlpha * 0.2;
+    ctx.fill();
+
     ctx.beginPath();
     ctx.arc(px, py, size, 0, Math.PI * 2);
     ctx.fillStyle = s.color;
-    ctx.globalAlpha = brightness * twinkleAlpha;
+    ctx.globalAlpha = 0.34 + brightness * twinkleAlpha * 1.2;
     ctx.fill();
+    if (size > 0.26) {
+      ctx.strokeStyle = s.color;
+      ctx.globalAlpha = 0.08 + brightness * twinkleAlpha * 0.2;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(px - size * 3.2, py);
+      ctx.lineTo(px + size * 3.2, py);
+      ctx.moveTo(px, py - size * 3.2);
+      ctx.lineTo(px, py + size * 3.2);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   });
 
   // Planets
   planets.forEach((p, i) => {
+    if (activePlanet === p) {
+      const currentR = p.r;
+      p.x = Math.max(currentR, Math.min(W - currentR, p.x));
+      p.y = Math.max(currentR, Math.min(H - currentR, p.y));
+    }
     // Planet mouse repulsion and scaling
     const dx = p.x - mouseX;
     const dy = p.y - mouseY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     let sizeM = 1;
-    if (dist < 200) {
+    if (activePlanet !== p && dist < 200) {
       const force = (200 - dist) / 200;
-      p.x += (dx / dist) * force * 2; // gently push away
-      p.y += (dy / dist) * force * 2;
-      sizeM = 1 + force * 0.3; // increase size slightly on hover
+      p.x += (dx / dist) * force * 1.8;
+      p.y += (dy / dist) * force * 1.8;
+      sizeM = 1 + force * 0.28;
+    } else if (activePlanet !== p && dist < 380) {
+      const pull = (380 - dist) / 380;
+      p.x -= (dx / dist) * pull * 0.2;
+      p.y -= (dy / dist) * pull * 0.2;
     }
 
-    p.x += p.vx * Math.sin(t * 0.001 + i);
-    p.y += p.vy * Math.cos(t * 0.0008 + i);
+    if (activePlanet !== p) {
+      p.x += p.vx * Math.sin(t * 0.001 + i);
+      p.y += p.vy * Math.cos(t * 0.0008 + i);
+      p.x += p.motionVX;
+      p.y += p.motionVY;
+      p.motionVX *= 0.97;
+      p.motionVY *= 0.97;
+      p.motionVX += (p.homeX - p.x) * 0.0026;
+      p.motionVY += (p.homeY - p.y) * 0.0026;
+    }
     
     const currentR = p.r * sizeM;
 
@@ -211,16 +412,40 @@ function drawGalaxy() {
     ctx.arc(p.x, p.y, currentR, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ring (for first planet)
+    for (let b = 0; b < 7; b++) {
+      const bandY = (Math.sin(t * 0.003 + p.textureSeed + b * 1.4) * 0.28) * currentR;
+      const bandR = currentR * (0.86 - b * 0.08);
+      if (bandR <= 0) continue;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y + bandY, bandR, Math.max(2, bandR * 0.22), 0, 0, Math.PI * 2);
+      ctx.fillStyle = b % 2 === 0 ? '#ffffff14' : '#0000001a';
+      ctx.fill();
+    }
+    // Ring (for ringed planets)
     if (p.ring) {
+      p.ringRotation += (p.ringSpeed || 0.005);
       ctx.save();
       ctx.translate(p.x, p.y);
-      ctx.scale(1, 0.35);
-      ctx.beginPath();
-      ctx.arc(0, 0, currentR * 1.8, 0, Math.PI * 2);
-      ctx.strokeStyle = p.ringColor;
-      ctx.lineWidth = 10 * sizeM;
-      ctx.stroke();
+      ctx.rotate(p.ringRotation);
+      ctx.scale(1, p.ringTilt || 0.35);
+      const bandCount = p.ringBands || 2;
+      for (let band = 0; band < bandCount; band++) {
+        const ringRadius = currentR * (1.45 + band * 0.24);
+        const ringW = Math.max(1.5, currentR * (0.065 - band * 0.01));
+        ctx.beginPath();
+        ctx.ellipse(0, 0, ringRadius, ringRadius, 0, Math.PI, 2 * Math.PI);
+        ctx.strokeStyle = p.ringColor || 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = ringW;
+        ctx.globalAlpha = 0.34 - band * 0.08;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(0, 0, ringRadius, ringRadius, 0, 0, Math.PI);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = ringW * 0.55;
+        ctx.globalAlpha = 0.16 - band * 0.04;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
   });
@@ -332,6 +557,48 @@ const observer = new IntersectionObserver(entries => {
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
+const certificateCards = document.querySelectorAll('#certificates .cert-card');
+if (certificateCards.length) {
+  const triggerCertificatePop = () => {
+    certificateCards.forEach((card, idx) => {
+      card.classList.remove('cert-pop-visible');
+      card.style.setProperty('--cert-delay', `${idx * 130}ms`);
+      setTimeout(() => card.classList.add('cert-pop-visible'), idx * 130);
+    });
+  };
+  setTimeout(triggerCertificatePop, 350);
+  setInterval(triggerCertificatePop, 5600);
+}
+
+const certificatesGrid = document.querySelector('.certificates-grid');
+if (certificatesGrid) {
+  let isDragging = false;
+  let startX = 0;
+  let startScrollLeft = 0;
+  const beginDrag = (clientX) => {
+    isDragging = true;
+    certificatesGrid.classList.add('dragging');
+    startX = clientX;
+    startScrollLeft = certificatesGrid.scrollLeft;
+  };
+  const moveDrag = (clientX) => {
+    if (!isDragging) return;
+    const walk = (clientX - startX) * 1.2;
+    certificatesGrid.scrollLeft = startScrollLeft - walk;
+  };
+  const endDrag = () => {
+    isDragging = false;
+    certificatesGrid.classList.remove('dragging');
+  };
+  certificatesGrid.addEventListener('mousedown', (e) => beginDrag(e.clientX));
+  window.addEventListener('mousemove', (e) => moveDrag(e.clientX));
+  window.addEventListener('mouseup', endDrag);
+  certificatesGrid.addEventListener('mouseleave', endDrag);
+  certificatesGrid.addEventListener('touchstart', (e) => beginDrag(e.touches[0].clientX), { passive: true });
+  certificatesGrid.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX), { passive: true });
+  certificatesGrid.addEventListener('touchend', endDrag);
+}
+
 /* ─── ACTIVE NAV ─── */
 const sections = document.querySelectorAll('section');
 const navLinks = document.querySelectorAll('nav a:not(.nav-logo)');
@@ -442,7 +709,7 @@ function sendChatMessage() {
 
 function getAIResponse(input) {
   if (input.includes('who') || input.includes('about') || input.includes('name')) {
-    return "I am Vivek Sharma, a 17-year-old B.Tech CSE student at Lovely Professional University. My goal is to become a skilled software developer!";
+    return "I am Vivek Sharma, an 18-year-old B.Tech CSE student at Lovely Professional University. My goal is to become a skilled software developer!";
   }
   if (input.includes('project') || input.includes('built') || input.includes('made')) {
     return "I have built a Student Marks Portal featuring a login system, marks search by registration number, and an admin view. I focus on responsive, dynamic web applications.";
@@ -454,7 +721,7 @@ function getAIResponse(input) {
     return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
   }
   if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
-    return "You can reach me via email at viveksharmacse@lpu.in or by using the contact form in the Contact section below!";
+    return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
   }
   if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
     return "Hello! I'm Vivek's AI Assistant. You can ask me about his skills, projects, education, or how to contact him.";
