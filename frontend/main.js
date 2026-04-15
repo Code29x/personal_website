@@ -1,3 +1,8 @@
+const IS_EDGE_BROWSER = /\bEdg\//.test(navigator.userAgent);
+if (IS_EDGE_BROWSER) {
+  document.body.classList.add('is-edge');
+}
+
 /* ─── CURSOR ─── */
 const cursor = document.getElementById('cursor');
 const cursorRing = document.getElementById('cursor-ring');
@@ -91,7 +96,7 @@ resize();
 window.addEventListener('resize', resize);
 
 // Stars
-const STAR_COUNT = 1350;
+const STAR_COUNT = IS_EDGE_BROWSER ? 700 : 1350;
 const STAR_INTERACTION_RADIUS = 170;
 const stars = Array.from({length: STAR_COUNT}, () => ({
   x: Math.random() * 2000 - 1000,
@@ -108,7 +113,8 @@ const stars = Array.from({length: STAR_COUNT}, () => ({
 }));
 
 // Nebula clouds
-const nebulae = Array.from({length: 6}, (_, i) => ({
+const NEBULA_COUNT = IS_EDGE_BROWSER ? 4 : 6;
+const nebulae = Array.from({length: NEBULA_COUNT}, (_, i) => ({
   x: Math.random() * W,
   y: Math.random() * H,
   r: 150 + Math.random() * 300,
@@ -160,7 +166,7 @@ function spawnShootingStar() {
     color: ['#00ff88','#00d4ff','#ff006e','#fff'][Math.floor(Math.random()*4)],
   });
 }
-setInterval(spawnShootingStar, 3000);
+setInterval(spawnShootingStar, IS_EDGE_BROWSER ? 4800 : 3000);
 
 let t = 0;
 let mouseX = W/2, mouseY = H/2;
@@ -481,7 +487,8 @@ const particleContainer = document.getElementById('particles-container');
 const PARTICLE_COLORS = ['#00ff88','#00d4ff','#ff006e','#ffee00','#ff3333','#bf5fff'];
 const particleData = [];
 
-for (let i = 0; i < 60; i++) {
+const PARTICLE_COUNT = IS_EDGE_BROWSER ? 28 : 60;
+for (let i = 0; i < PARTICLE_COUNT; i++) {
   const p = document.createElement('div');
   const size = 3 + Math.random() * 6;
   const color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
@@ -567,7 +574,9 @@ if (certificateCards.length) {
     });
   };
   setTimeout(triggerCertificatePop, 350);
-  setInterval(triggerCertificatePop, 5600);
+  if (!IS_EDGE_BROWSER) {
+    setInterval(triggerCertificatePop, 5600);
+  }
 }
 
 const certificatesGrid = document.querySelector('.certificates-grid');
@@ -754,6 +763,11 @@ function getAIResponse(input) {
 }
 
 /* ─── LIGHTBOX LOGIC ─── */
+function getCertificateFallback(title = 'Certificate') {
+  const safeText = encodeURIComponent(title || 'Certificate');
+  return `https://via.placeholder.com/1200x760/1a1a2e/00ff88?text=${safeText}`;
+}
+
 function openLightbox(imgSrc, title = '', date = '', desc = '') {
   const modal = document.getElementById('lightbox-modal');
   const img = document.getElementById('lightbox-img');
@@ -762,6 +776,10 @@ function openLightbox(imgSrc, title = '', date = '', desc = '') {
   document.getElementById('lightbox-date').textContent = date;
   document.getElementById('lightbox-desc').textContent = desc;
 
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = getCertificateFallback(title);
+  };
   img.src = imgSrc;
   modal.classList.add('show');
 }

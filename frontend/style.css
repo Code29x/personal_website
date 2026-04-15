@@ -1151,6 +1151,7 @@ footer span { color: var(--neon-green); }
 .form-group textarea { resize: vertical; min-height: 120px; }
 .form-submit-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; font-size: 14px; padding: 16px; background: linear-gradient(145deg, rgba(0,255,136,0.03), rgba(0,212,255,0.014)); border: 1px solid rgba(0,255,136,0.58); color: var(--neon-green); position: relative; overflow: hidden; }
 .form-submit-btn:hover { background: var(--neon-green); color: #000; }
+.form-submit-btn { border-radius: 999px; isolation: isolate; }
 
 /* Contact liquid-glass sheen on rounded elements */
 .contact-card::after,
@@ -1166,6 +1167,14 @@ footer span { color: var(--neon-green); }
   mix-blend-mode: screen;
   filter: blur(0.4px);
   pointer-events: none;
+}
+
+/* Prevent aliasing artifacts on rounded button edges */
+.form-submit-btn::after {
+  inset: 0;
+  border-radius: inherit;
+  transform: translateX(-62%) rotate(6deg);
+  filter: none;
 }
 
 @keyframes contactGlassSweep {
@@ -1293,4 +1302,19 @@ h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover, li:hover {
   .chatbot-window { width: min(360px, calc(100vw - 28px)); bottom: 70px; right: 0; }
   #chatbot-container { margin: 14px 14px 20px; max-width: none; }
   .lightbox-close { top: 15px; right: 20px; font-size: 40px; }
+}
+
+/* Lighter compositor settings for Microsoft Edge */
+body.is-edge #particles-container {
+  opacity: 0.75;
+}
+body.is-edge .chatbot-window,
+body.is-edge nav,
+body.is-edge .glass-card {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+body.is-edge :is(.glass-card, .cert-card, .form-submit-btn)::after {
+  animation-duration: 10s;
+  opacity: 0.38;
 }
