@@ -700,6 +700,346 @@ function handleContactSubmit(e) {
 }
 
 /* ─── AI CHATBOT LOGIC ─── */
+const CHAT_LANG_KEY = 'portfolio_chat_lang';
+let chatOpGeneration = 0;
+let activeChatAbort = null;
+
+const CHAT_I18N = {
+  en: {
+    stopped: 'Stopped.',
+    calc_prefix: 'Result:',
+    calc_err:
+      'Could not evaluate that expression. Use digits, + − * / ^ %, parentheses, or sqrt(16), sin(0.5), pow(2,8), log(100), pi, e.',
+    wiki_miss: 'No clear Wikipedia match. Try different words or use the links below.',
+    intro_default:
+      "Hi! Ask about Vivek's skills, projects, or education. For other topics I load Wikipedia here. Turn AI on for optional Gemini polish (GEMINI_API_KEY on Netlify).",
+    identity:
+      "I'm Vivek Sharma, an 18-year-old B.Tech CSE student at Lovely Professional University. My goal is to become a skilled software developer!",
+    project:
+      'I built a Student Marks Portal with login, marks search by registration number, and an admin view — responsive, dynamic web apps.',
+    skill:
+      'Skills: C, Python, HTML, CSS, JavaScript. Strengths: problem-solving, consistency, and learning fast.',
+    education:
+      "I'm pursuing B.Tech Computer Science Engineering at Lovely Professional University (LPU).",
+    gemini_help:
+      'For general topics I show Wikipedia here. Turn AI on and set GEMINI_API_KEY on Netlify for optional Google Gemini polish.',
+    contact:
+      'Email: viveklpu008@gmail.com — or use the Contact form on this site.',
+    hello_greet:
+      "Hello! Ask about Vivek's skills, projects, or education. Other questions use Wikipedia in-chat; AI toggle = optional Gemini.",
+  },
+  hi: {
+    stopped: 'रोका गया।',
+    calc_prefix: 'परिणाम:',
+    calc_err:
+      'इसे हल नहीं कर सका। अंक, + − * / ^ %, कोष्ठक, या sqrt(16), pow(2,8), log(100), pi, e आदि इस्तेमाल करें।',
+    wiki_miss: 'विकिपीडिया पर साफ़ मेल नहीं मिला। शब्द बदलकर देखें या नीचे लिंक उपयोग करें।',
+    intro_default:
+      'नमस्ते! विवेक के बारे में, स्किल्स, प्रोजेक्ट या पढ़ाई पूछें। बाकी विषयों के लिए यहाँ विकिपीडिया सार मिलेगा। AI चालू करने पर Gemini संक्षेप (Netlify पर GEMINI_API_KEY)।',
+    identity:
+      'मैं विवेक शर्मा हूँ — लवली प्रोफेशनल यूनिवर्सिटी में B.Tech CSE का छात्र। मेरा लक्ष्य एक कुशल सॉफ्टवेयर डेवलपर बनना है!',
+    project:
+      'मैंने स्टूडेंट मार्क्स पोर्टल बनाया है: लॉगिन, रजिस्ट्रेशन नंबर से मार्क्स खोजना, और एडमिन व्यू।',
+    skill:
+      'स्किल्स: C, Python, HTML, CSS, JavaScript — समस्या सुलझाना और लगातार सीखना।',
+    education: 'मैं लवली प्रोफेशनल यूनिवर्सिटी (LPU) से B.Tech CSE कर रहा हूँ।',
+    gemini_help:
+      'सामान्य विषयों के लिए यहाँ विकिपीडिया दिखता है। Gemini के लिए Netlify पर GEMINI_API_KEY और AI टॉगल चालू करें।',
+    contact:
+      'ईमेल: viveklpu008@gmail.com — या इस साइट पर Contact फ़ॉर्म भरें।',
+    hello_greet:
+      'नमस्ते! विवेक की स्किल्स, प्रोजेक्ट या पढ़ाई पूछें। बाकी सवालों पर विकिपीडिया यहीं दिखेगा।',
+  },
+  hing: {
+    stopped: 'Stop ho gaya.',
+    calc_prefix: 'Answer:',
+    calc_err:
+      'Ye solve nahi hua. Try: numbers, + - * / ^ %, brackets, sqrt(16), pow(2,8), log(100), pi, e.',
+    wiki_miss: 'Wikipedia pe clear match nahi mila. Alag words try karo ya neeche links use karo.',
+    intro_default:
+      "Hi! Vivek ke skills, projects, education ke baare mein pucho. Baaki topics ke liye Wikipedia yahin load hota hai. AI on = optional Gemini polish (Netlify pe key).",
+    identity:
+      "Main Vivek Sharma — 18 saal, B.Tech CSE student LPU mein. Goal: skilled software developer banna!",
+    project:
+      'Student Marks Portal banaya: login, reg. number se marks search, admin view — responsive web apps.',
+    skill: 'Skills: C, Python, HTML, CSS, JS. Problem-solving + consistency strong hai.',
+    education: 'Abhi LPU se B.Tech CSE kar raha hoon.',
+    gemini_help:
+      'General topics ke liye Wikipedia yahin. Gemini polish ke liye Netlify pe GEMINI_API_KEY + AI on.',
+    contact: 'Email: viveklpu008@gmail.com — ya Contact form use karo.',
+    hello_greet:
+      'Hello! Vivek ke skills / projects / education pucho. Baaki Wikipedia in-chat; AI = optional Gemini.',
+  },
+};
+
+function getChatLang() {
+  try {
+    const v = sessionStorage.getItem(CHAT_LANG_KEY);
+    if (v === 'hi' || v === 'hing' || v === 'en') return v;
+  } catch (e) {}
+  return 'en';
+}
+
+function tChat(key) {
+  const lang = getChatLang();
+  const pack = CHAT_I18N[lang] || CHAT_I18N.en;
+  return pack[key] != null ? pack[key] : CHAT_I18N.en[key] || '';
+}
+
+function normalizeQueryForMatch(s) {
+  let x = String(s || '').toLowerCase();
+  x = x.replace(/[०-९]/g, (ch) => '0123456789'['०१२३४५६७८९'.indexOf(ch)]);
+  return x;
+}
+
+/** Safe math: ints, floats, + - * / % ^, parentheses, sqrt sin cos tan asin acos atan log10 ln abs exp min max pow, pi, e */
+function normalizeMathInput(raw) {
+  let s = String(raw || '')
+    .replace(/\u2212/g, '-')
+    .replace(/[×✕]/g, '*')
+    .replace(/[÷]/g, '/')
+    .replace(/\s+/g, '');
+  s = s.replace(/[०-९]/g, (ch) => '0123456789'['०१२३४५६७८९'.indexOf(ch)]);
+  return s;
+}
+
+function stripCalcPrefixes(s) {
+  let t = s.trim();
+  t = t.replace(/^(calculate|compute|calc|गणना|hisab|हिसाब)\s*[:=]?\s*/i, '');
+  t = t.replace(/^[=]\s*/, '');
+  return t.trim();
+}
+
+class MathEval {
+  constructor(str) {
+    this.s = str;
+    this.i = 0;
+  }
+  peek() {
+    return this.s[this.i] || '';
+  }
+  get() {
+    return this.s[this.i++] || '';
+  }
+  skip() {
+    while (/\s/.test(this.peek())) this.i += 1;
+  }
+  parse() {
+    this.skip();
+    const v = this.parseExpr();
+    this.skip();
+    if (this.i < this.s.length) throw new Error('extra');
+    return v;
+  }
+  parseExpr() {
+    let left = this.parseTerm();
+    for (;;) {
+      this.skip();
+      const op = this.peek();
+      if (op === '+') {
+        this.i++;
+        left += this.parseTerm();
+      } else if (op === '-') {
+        this.i++;
+        left -= this.parseTerm();
+      } else break;
+    }
+    return left;
+  }
+  parseTerm() {
+    let left = this.parsePower();
+    for (;;) {
+      this.skip();
+      const op = this.peek();
+      if (op === '*') {
+        this.i++;
+        left *= this.parsePower();
+      } else if (op === '/') {
+        this.i++;
+        const r = this.parsePower();
+        if (r === 0) throw new Error('div0');
+        left /= r;
+      } else if (op === '%') {
+        this.i++;
+        left %= this.parsePower();
+      } else break;
+    }
+    return left;
+  }
+  parsePower() {
+    let left = this.parseUnary();
+    this.skip();
+    if (this.peek() === '^') {
+      this.i++;
+      return Math.pow(left, this.parsePower());
+    }
+    return left;
+  }
+  parseUnary() {
+    this.skip();
+    if (this.peek() === '+') {
+      this.i++;
+      return this.parseUnary();
+    }
+    if (this.peek() === '-') {
+      this.i++;
+      return -this.parseUnary();
+    }
+    return this.parsePrimary();
+  }
+  readIdent() {
+    this.skip();
+    let id = '';
+    while (/[a-zA-Z_]/.test(this.peek())) id += this.get();
+    return id || null;
+  }
+  parsePrimary() {
+    this.skip();
+    const c = this.peek();
+    if (c === '(') {
+      this.i++;
+      const v = this.parseExpr();
+      this.skip();
+      if (this.peek() !== ')') throw new Error('paren');
+      this.i++;
+      return v;
+    }
+    const id = this.readIdent();
+    if (id) {
+      if (id === 'pi') return Math.PI;
+      if (id === 'e') return Math.E;
+      this.skip();
+      if (this.peek() !== '(') throw new Error('fn');
+      this.i++;
+      const args = [];
+      this.skip();
+      if (this.peek() !== ')') {
+        args.push(this.parseExpr());
+        while (this.peek() === ',') {
+          this.i++;
+          args.push(this.parseExpr());
+        }
+      }
+      if (this.peek() !== ')') throw new Error('paren2');
+      this.i++;
+      return applyMathFn(id, args);
+    }
+    return this.parseNumber();
+  }
+  parseNumber() {
+    this.skip();
+    let start = this.i;
+    if (!/\d|\./.test(this.peek())) throw new Error('num');
+    while (/\d|\./.test(this.peek())) this.i += 1;
+    let frag = this.s.slice(start, this.i);
+    if (this.peek() === 'e' || this.peek() === 'E') {
+      this.i++;
+      if (this.peek() === '+' || this.peek() === '-') this.i++;
+      while (/\d/.test(this.peek())) this.i += 1;
+      frag = this.s.slice(start, this.i);
+    }
+    const n = parseFloat(frag);
+    if (!Number.isFinite(n)) throw new Error('nan');
+    return n;
+  }
+}
+
+function applyMathFn(name, args) {
+  const n = name.toLowerCase();
+  const a = (i) => args[i] ?? NaN;
+  switch (n) {
+    case 'sqrt':
+      return Math.sqrt(a(0));
+    case 'abs':
+      return Math.abs(a(0));
+    case 'sin':
+      return Math.sin(a(0));
+    case 'cos':
+      return Math.cos(a(0));
+    case 'tan':
+      return Math.tan(a(0));
+    case 'asin':
+      return Math.asin(a(0));
+    case 'acos':
+      return Math.acos(a(0));
+    case 'atan':
+      return Math.atan(a(0));
+    case 'log':
+    case 'log10':
+      return Math.log10(a(0));
+    case 'ln':
+      return Math.log(a(0));
+    case 'exp':
+      return Math.exp(a(0));
+    case 'floor':
+      return Math.floor(a(0));
+    case 'ceil':
+      return Math.ceil(a(0));
+    case 'round':
+      return Math.round(a(0));
+    case 'min':
+      return Math.min(...args);
+    case 'max':
+      return Math.max(...args);
+    case 'pow':
+      return Math.pow(a(0), a(1));
+    default:
+      throw new Error('unknownfn');
+  }
+}
+
+function tryEvaluateMathExpression(raw) {
+  const rawTrim = String(raw || '').trim();
+  const hadPrefix = /^(calculate|compute|calc|गणना|hisab|हिसाब)\s*[:=]?\s*/i.test(rawTrim);
+  const stripped = stripCalcPrefixes(normalizeMathInput(raw));
+  if (!stripped || !/[\d.]/.test(stripped)) return null;
+  const hasOp = /[+\-*/%^()]/.test(stripped);
+  const hasFn =
+    /sqrt|pow|sin|cos|tan|log|ln|abs|exp|min|max|floor|ceil|round|asin|acos|atan|pi\b|e\b/i.test(
+      stripped
+    );
+  if (!hadPrefix && !hasOp && !hasFn) return null;
+  try {
+    const ev = new MathEval(stripped);
+    const v = ev.parse();
+    if (!Number.isFinite(v)) throw new Error('inf');
+    let out;
+    if (Math.abs(v - Math.round(v)) < 1e-12 && Math.abs(v) < 1e15) out = String(Math.round(v));
+    else out = String(Number(v.toPrecision(14)));
+    return `${tChat('calc_prefix')} ${out}`;
+  } catch (e) {
+    return tChat('calc_err');
+  }
+}
+
+function isStaleOp(opId) {
+  return opId !== chatOpGeneration;
+}
+
+function setStopButtonVisible(show) {
+  const btn = document.getElementById('chatbot-stop');
+  if (!btn) return;
+  if (show) btn.removeAttribute('hidden');
+  else btn.setAttribute('hidden', '');
+}
+
+function removeThinkingMessages() {
+  document.querySelectorAll('.bot-message--typing').forEach((n) => n.remove());
+}
+
+function stopChatQuery() {
+  chatOpGeneration += 1;
+  if (activeChatAbort) {
+    try {
+      activeChatAbort.abort();
+    } catch (e) {}
+    activeChatAbort = null;
+  }
+  removeThinkingMessages();
+  setStopButtonVisible(false);
+  appendMessage(tChat('stopped'), 'bot');
+}
+
 const chatbotToggle = document.getElementById('chatbot-toggle');
 const chatbotWindow = document.getElementById('chatbot-window');
 const chatbotClose = document.getElementById('chatbot-close');
@@ -782,6 +1122,24 @@ chatbotWindow.addEventListener('mousemove', resetChatbotIdleTimer);
 chatbotWindow.addEventListener('click', resetChatbotIdleTimer);
 chatbotWindow.addEventListener('keydown', resetChatbotIdleTimer);
 
+(function initChatLangAndStop() {
+  const langSel = document.getElementById('chatbot-lang');
+  if (langSel) {
+    langSel.value = getChatLang();
+    langSel.addEventListener('change', () => {
+      try {
+        sessionStorage.setItem(CHAT_LANG_KEY, langSel.value);
+      } catch (e) {}
+      const intro = document.getElementById('chatbot-intro-msg');
+      if (intro) intro.textContent = tChat('intro_default');
+    });
+  }
+  const introEl = document.getElementById('chatbot-intro-msg');
+  if (introEl) introEl.textContent = tChat('intro_default');
+  const stopBtn = document.getElementById('chatbot-stop');
+  if (stopBtn) stopBtn.addEventListener('click', stopChatQuery);
+})();
+
 function appendMessage(text, sender, options = {}) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${sender}-message`;
@@ -805,22 +1163,26 @@ function scrollChatToEnd() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-async function typewriterIntoElement(el, text, cps = 38) {
+async function typewriterIntoElement(el, text, cps = 38, signal) {
   if (!el) return;
   const base = 1000 / cps;
   el.textContent = '';
   for (let i = 1; i <= text.length; i += 1) {
+    if (signal && signal.aborted) {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      return;
+    }
     el.textContent = text.slice(0, i);
     scrollChatToEnd();
     await new Promise((r) => setTimeout(r, base + Math.random() * 18));
   }
 }
 
-async function appendBotPlainTyped(text, cps = 38) {
+async function appendBotPlainTyped(text, cps = 38, signal) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'message bot-message';
   chatMessages.appendChild(msgDiv);
-  await typewriterIntoElement(msgDiv, text, cps);
+  await typewriterIntoElement(msgDiv, text, cps, signal);
   scrollChatToEnd();
 }
 
@@ -863,7 +1225,7 @@ function buildWikipediaSearchUrl(query) {
  * Public Wikipedia summary via MediaWiki API (browser CORS with origin=*).
  * @returns {Promise<{ title: string, extract: string, pageUrl: string }|null>}
  */
-async function fetchWikipediaSummary(query) {
+async function fetchWikipediaSummary(query, signal) {
   const q = String(query).trim();
   if (!q) return null;
 
@@ -875,7 +1237,7 @@ async function fetchWikipediaSummary(query) {
     srsearch: q,
     srlimit: '1',
   });
-  const sres = await fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`);
+  const sres = await fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`, { signal });
   const sdata = await sres.json();
   const hits = sdata.query && sdata.query.search;
   if (!hits || !hits.length) return null;
@@ -891,7 +1253,7 @@ async function fetchWikipediaSummary(query) {
     exchars: '2000',
     titles: title,
   });
-  const eres = await fetch(`https://en.wikipedia.org/w/api.php?${extractParams}`);
+  const eres = await fetch(`https://en.wikipedia.org/w/api.php?${extractParams}`, { signal });
   const edata = await eres.json();
   const pages = edata.query && edata.query.pages;
   if (!pages) return null;
@@ -908,19 +1270,20 @@ async function fetchWikipediaSummary(query) {
 }
 
 /** Optional Netlify function: Gemini rewrite of Wikipedia excerpt */
-async function fetchGeminiEnrich(query, context) {
+async function fetchGeminiEnrich(query, context, signal) {
   try {
     const res = await fetch('/.netlify/functions/gemini-enrich', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, context }),
+      signal,
     });
     const data = await res.json().catch(() => ({}));
     if (data && data.configured && data.text) {
       return { text: String(data.text).trim() };
     }
   } catch (e) {
-    /* ignore — fall back to Wikipedia text */
+    if (e && e.name === 'AbortError') throw e;
   }
   return null;
 }
@@ -944,34 +1307,63 @@ function sendChatMessage() {
   appendMessage(val, 'user');
   chatInput.value = '';
 
+  if (activeChatAbort) {
+    try {
+      activeChatAbort.abort();
+    } catch (e) {}
+    activeChatAbort = null;
+  }
+
+  const opId = ++chatOpGeneration;
+  const ac = new AbortController();
+  activeChatAbort = ac;
+  setStopButtonVisible(true);
+
   const delay = 520 + Math.random() * 380;
-  setTimeout(() => void respondChat(val), delay);
+  setTimeout(() => {
+    void respondChat(val, opId, ac.signal).finally(() => {
+      if (isStaleOp(opId)) return;
+      setStopButtonVisible(false);
+      if (activeChatAbort === ac) activeChatAbort = null;
+    });
+  }, delay);
 }
 
-async function respondChat(val) {
-  const input = val.toLowerCase();
+async function respondChat(val, opId, signal) {
+  if (isStaleOp(opId)) return;
 
-  const local = getLocalAIResponse(input);
-  if (local) {
-    await appendBotPlainTyped(local, 40);
+  const calcResult = tryEvaluateMathExpression(val);
+  if (calcResult) {
+    if (isStaleOp(opId)) return;
+    await appendBotPlainTyped(calcResult, 42, signal);
     return;
   }
 
+  if (isStaleOp(opId)) return;
+  const local = getLocalAIResponse(val);
+  if (local) {
+    if (isStaleOp(opId)) return;
+    await appendBotPlainTyped(local, 40, signal);
+    return;
+  }
+
+  if (isStaleOp(opId)) return;
   const googleUrl = buildGoogleSearchUrl(val);
   const thinking = showBotThinking('Looking up Wikipedia…');
   let wiki = null;
   try {
-    wiki = await fetchWikipediaSummary(val);
+    wiki = await fetchWikipediaSummary(val, signal);
   } catch (e) {
+    removeNodeIfThinking(thinking);
+    if (e && e.name === 'AbortError') return;
     wiki = null;
   }
   removeNodeIfThinking(thinking);
+  if (isStaleOp(opId)) return;
 
   if (!wiki || !wiki.extract) {
-    await appendBotPlainTyped(
-      "I could not find a clear Wikipedia match for that. Try different wording, or use the links below.",
-      36
-    );
+    await appendBotPlainTyped(tChat('wiki_miss'), 36, signal);
+    if (isStaleOp(opId)) return;
     const wikiUrl = buildWikipediaSearchUrl(val);
     appendMessage(
       `<div class="chat-web-links">` +
@@ -988,13 +1380,20 @@ async function respondChat(val) {
   let usedGemini = false;
   if (isChatAIOpen()) {
     const thinkingAi = showBotThinking('Polishing with Google Gemini…');
-    const enriched = await fetchGeminiEnrich(val, wiki.extract);
-    removeNodeIfThinking(thinkingAi);
-    if (enriched && enriched.text) {
-      bodyText = enriched.text;
-      usedGemini = true;
+    try {
+      const enriched = await fetchGeminiEnrich(val, wiki.extract, signal);
+      removeNodeIfThinking(thinkingAi);
+      if (enriched && enriched.text) {
+        bodyText = enriched.text;
+        usedGemini = true;
+      }
+    } catch (e) {
+      removeNodeIfThinking(thinkingAi);
+      if (e && e.name === 'AbortError') return;
     }
   }
+
+  if (isStaleOp(opId)) return;
 
   const maxLen = 1600;
   if (bodyText.length > maxLen) {
@@ -1010,54 +1409,94 @@ async function respondChat(val) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'message bot-message';
   chatMessages.appendChild(msgDiv);
-  await typewriterIntoElement(msgDiv, bodyText, 44);
+  await typewriterIntoElement(msgDiv, bodyText, 44, signal);
+  if (isStaleOp(opId) || (signal && signal.aborted)) return;
   msgDiv.insertAdjacentHTML('beforeend', attrLine);
   scrollChatToEnd();
 }
 
 /** @returns {string|null} Answer from site knowledge, or null to allow web / fallback */
-function getLocalAIResponse(input) {
+function getLocalAIResponse(raw) {
+  const x = normalizeQueryForMatch(raw);
+  const r = String(raw || '');
+
   const asksPortfolio =
-    input.includes('vivek') ||
-    input.includes('portfolio') ||
-    input.includes('this site') ||
-    input.includes('your site') ||
-    input.includes('website');
+    x.includes('vivek') ||
+    r.includes('विवेक') ||
+    x.includes('portfolio') ||
+    x.includes('this site') ||
+    x.includes('your site') ||
+    x.includes('website') ||
+    r.includes('पोर्टफोलियो');
 
   const asksIdentity =
     (asksPortfolio &&
-      (input.includes('who') || input.includes('about') || input.includes('name'))) ||
-    (input.includes('who') && (input.includes('you') || input.includes('are you'))) ||
-    input.includes('your name') ||
-    input.includes('his name') ||
-    (input.includes('name') && input.includes('vivek'));
+      (x.includes('who') || x.includes('about') || x.includes('name'))) ||
+    (x.includes('who') && (x.includes('you') || x.includes('are you'))) ||
+    x.includes('your name') ||
+    x.includes('his name') ||
+    (x.includes('name') && (x.includes('vivek') || r.includes('विवेक'))) ||
+    (r.includes('विवेक') && (r.includes('कौन') || r.includes('क्या'))) ||
+    (x.includes('kaun') && x.includes('vivek')) ||
+    (x.includes('kon') && x.includes('hai') && x.includes('vivek'));
 
   if (asksIdentity) {
-    return "I am Vivek Sharma, an 18-year-old B.Tech CSE student at Lovely Professional University. My goal is to become a skilled software developer!";
-  }
-  if (input.includes('project') || input.includes('built') || input.includes('made')) {
-    return "I have built a Student Marks Portal featuring a login system, marks search by registration number, and an admin view. I focus on responsive, dynamic web applications.";
-  }
-  if (input.includes('skill') || input.includes('know') || input.includes('tech')) {
-    return "My skills include C, Python, HTML, CSS, and JavaScript. My core strengths are problem-solving, consistency, and a strong learning mindset.";
+    return tChat('identity');
   }
   if (
-    input.includes('education') ||
-    input.includes('study') ||
-    input.includes('university') ||
-    input.includes('college') ||
-    input.includes('lpu')
+    x.includes('project') ||
+    x.includes('built') ||
+    x.includes('made') ||
+    x.includes('banaya') ||
+    r.includes('प्रोजेक्ट')
   ) {
-    return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
+    return tChat('project');
   }
-  if (input.includes('gemini') || input.includes('chatgpt') || input.includes('openai')) {
-    return "For general topics I load Wikipedia into this chat. Turn Web on and add GEMINI_API_KEY on Netlify if you want Google Gemini to shorten that text.";
+  if (
+    x.includes('skill') ||
+    x.includes('know') ||
+    x.includes('tech') ||
+    r.includes('स्किल') ||
+    x.includes('kaun si language')
+  ) {
+    return tChat('skill');
   }
-  if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
-    return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
+  if (
+    x.includes('education') ||
+    x.includes('study') ||
+    x.includes('university') ||
+    x.includes('college') ||
+    x.includes('lpu') ||
+    r.includes('पढ़ाई') ||
+    r.includes('यूनिवर्सिटी') ||
+    x.includes('padhai')
+  ) {
+    return tChat('education');
   }
-  if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
-    return "Hello! Ask about Vivek's skills, projects, or education. For other questions I fetch Wikipedia into this chat; turn Web on for optional Google Gemini polish (needs API key on the server).";
+  if (x.includes('gemini') || x.includes('chatgpt') || x.includes('openai')) {
+    return tChat('gemini_help');
+  }
+  if (
+    x.includes('contact') ||
+    x.includes('email') ||
+    x.includes('reach') ||
+    x.includes('hire') ||
+    r.includes('संपर्क') ||
+    r.includes('ईमेल') ||
+    x.includes('mail karo')
+  ) {
+    return tChat('contact');
+  }
+  if (
+    x.includes('hi') ||
+    x.includes('hello') ||
+    x.includes('hey') ||
+    r.includes('नमस्ते') ||
+    r.includes('नमस्कार') ||
+    x.includes('namaste') ||
+    x.includes('namaskar')
+  ) {
+    return tChat('hello_greet');
   }
 
   return null;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vivek Sharma | Portfolio</title>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -404,8 +404,16 @@
       </div>
       <button type="button" id="chatbot-close" aria-label="Close chat"><i class="fas fa-times"></i></button>
     </div>
+    <div class="chatbot-toolbar">
+      <label class="chatbot-lang-label" for="chatbot-lang">Language</label>
+      <select id="chatbot-lang" class="chatbot-lang-select" title="Chat language">
+        <option value="en">English</option>
+        <option value="hi">हिंदी</option>
+        <option value="hing">Hinglish</option>
+      </select>
+    </div>
     <div class="chatbot-messages" id="chatbot-messages">
-      <div class="message bot-message">Hi! Ask about Vivek’s skills, projects, or education. For anything else I pull a Wikipedia summary into this chat. Turn AI on to optionally polish it with Google Gemini (needs GEMINI_API_KEY on Netlify).</div>
+      <div class="message bot-message" id="chatbot-intro-msg">Hi! Ask about Vivek’s skills, projects, or education. For anything else I pull a Wikipedia summary into this chat. Turn AI on to optionally polish it with Google Gemini (needs GEMINI_API_KEY on Netlify).</div>
     </div>
     <div class="chatbot-quick-actions">
       <button class="quick-btn" onclick="sendQuickMessage('Who is Vivek?')">Who is Vivek?</button>
@@ -415,7 +423,8 @@
     </div>
     <div class="chatbot-input">
       <input type="text" id="chat-input-field" placeholder="Ask me something..." onkeypress="handleChatEnter(event)">
-      <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+      <button type="button" id="chatbot-stop" class="chatbot-stop-btn" aria-label="Stop" title="Stop current reply" hidden><i class="fas fa-stop"></i></button>
+      <button type="button" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
     </div>
   </div>
 </div>
