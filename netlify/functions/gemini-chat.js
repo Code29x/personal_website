@@ -1,7 +1,7 @@
 /**
  * Google Gemini AI Chat (server-side only).
- * Netlify: Site settings → Environment variables
- *   GEMINI_API_KEY  — API key from Google AI Studio
+ * Uses Netlify AI Gateway, which auto-injects GEMINI_API_KEY and
+ * GOOGLE_GEMINI_BASE_URL on deployed sites — no manual key setup required.
  */
 exports.handler = async (event) => {
   const q = (event.queryStringParameters && event.queryStringParameters.q) || '';
@@ -26,8 +26,11 @@ exports.handler = async (event) => {
     };
   }
 
+  const baseUrl = (process.env.GOOGLE_GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
+  const model = 'gemini-2.5-flash';
+
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${key}`;
     const payload = {
       contents: [{
         parts: [{ text: prompt }]
