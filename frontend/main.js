@@ -772,10 +772,21 @@ const CHAT_I18N = {
   },
 };
 
+function setChatLang(lang) {
+  let v = lang;
+  if (v !== 'hi' && v !== 'hing' && v !== 'en') v = 'en';
+  try {
+    localStorage.setItem(CHAT_LANG_KEY, v);
+    sessionStorage.setItem(CHAT_LANG_KEY, v);
+  } catch (e) {}
+}
+
 function getChatLang() {
   try {
-    const v = sessionStorage.getItem(CHAT_LANG_KEY);
-    if (v === 'hi' || v === 'hing' || v === 'en') return v;
+    const ls = localStorage.getItem(CHAT_LANG_KEY);
+    if (ls === 'hi' || ls === 'hing' || ls === 'en') return ls;
+    const ss = sessionStorage.getItem(CHAT_LANG_KEY);
+    if (ss === 'hi' || ss === 'hing' || ss === 'en') return ss;
   } catch (e) {}
   return 'en';
 }
@@ -1127,9 +1138,7 @@ chatbotWindow.addEventListener('keydown', resetChatbotIdleTimer);
   if (langSel) {
     langSel.value = getChatLang();
     langSel.addEventListener('change', () => {
-      try {
-        sessionStorage.setItem(CHAT_LANG_KEY, langSel.value);
-      } catch (e) {}
+      setChatLang(langSel.value);
       const intro = document.getElementById('chatbot-intro-msg');
       if (intro) intro.textContent = tChat('intro_default');
     });

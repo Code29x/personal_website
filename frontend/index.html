@@ -404,13 +404,21 @@
       </div>
       <button type="button" id="chatbot-close" aria-label="Close chat"><i class="fas fa-times"></i></button>
     </div>
-    <div class="chatbot-toolbar">
-      <label class="chatbot-lang-label" for="chatbot-lang">Language</label>
-      <select id="chatbot-lang" class="chatbot-lang-select" title="Chat language">
-        <option value="en">English</option>
-        <option value="hi">हिंदी</option>
-        <option value="hing">Hinglish</option>
-      </select>
+    <div class="chatbot-toolbar" role="group" aria-label="Chat language selection">
+      <span class="chatbot-lang-icon" title="Choose reply language" aria-hidden="true"><i class="fas fa-language"></i></span>
+      <div class="chatbot-lang-field">
+        <label class="chatbot-lang-label" for="chatbot-lang">Choose language</label>
+        <select
+          id="chatbot-lang"
+          class="chatbot-lang-select"
+          title="English · हिंदी · Hinglish — applies to bot replies and quick help text"
+          aria-label="Chat language: English, Hindi, or Hinglish"
+        >
+          <option value="en">English</option>
+          <option value="hi">हिंदी (Hindi)</option>
+          <option value="hing">Hinglish</option>
+        </select>
+      </div>
     </div>
     <div class="chatbot-messages" id="chatbot-messages">
       <div class="message bot-message" id="chatbot-intro-msg">Hi! Ask about Vivek’s skills, projects, or education. For anything else I pull a Wikipedia summary into this chat. Turn AI on to optionally polish it with Google Gemini (needs GEMINI_API_KEY on Netlify).</div>
