@@ -874,12 +874,15 @@ async function fetchGeminiChatResponse(query) {
   }
 }
 
-async function appendForwardToVivekAfterAIFailure(query) {
+async function appendForwardToVivekAfterAIFailure(query, errorMsg) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'message bot-message';
   chatMessages.appendChild(msgDiv);
-  const line =
-    "I'm sorry, I encountered an error connecting to the AI. I've forwarded this message to Vivek for a personal reply.";
+  let line = "I'm sorry, I encountered an error connecting to the AI.";
+  if (errorMsg) {
+    line += ` (Error: ${errorMsg})`;
+  }
+  line += " I've forwarded this message to Vivek for a personal reply.";
   await typewriterIntoElement(msgDiv, line, 36);
   scrollChatToEnd();
 }
@@ -931,7 +934,7 @@ async function respondChat(val) {
       return;
     }
 
-    await appendForwardToVivekAfterAIFailure(val);
+    await appendForwardToVivekAfterAIFailure(val, data.error);
     return;
   }
 
