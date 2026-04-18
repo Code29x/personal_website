@@ -1,7 +1,8 @@
 /**
  * Google Gemini AI Chat (server-side only).
  * Netlify: Site settings → Environment variables
- *   GEMINI_API_KEY  — API key from Google AI Studio
+ *   GEMINI_API_KEY          — API key from Google AI Studio (local or Netlify AI Gateway)
+ *   GOOGLE_GEMINI_BASE_URL — Netlify AI Gateway base URL, injected automatically on deployed sites
  */
 exports.handler = async (event) => {
   const q = (event.queryStringParameters && event.queryStringParameters.q) || '';
@@ -9,7 +10,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'POST' && event.body) {
     try {
       bodyData = JSON.parse(event.body);
-    } catch(e) {}
+    } catch (e) {}
   }
   const prompt = String(bodyData.prompt || q).trim();
 
@@ -17,8 +18,11 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'missing_prompt' }) };
   }
 
+  const gatewayBase = process.env.GOOGLE_GEMINI_BASE_URL;
   const key = process.env.GEMINI_API_KEY;
-  if (!key) {
+  const useGateway = Boolean(gatewayBase);
+
+  if (!useGateway && !key) {
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -27,14 +31,18 @@ exports.handler = async (event) => {
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const model = useGateway ? 'gemini-2.5-flash' : 'gemini-3.1-pro';
+    const baseUrl = useGateway ? gatewayBase : 'https://generativelanguage.googleapis.com/v1beta';
+    const url = `${baseUrl}/models/${model}:generateContent${useGateway ? '' : `?key=${key}`}`;
     const payload = {
       contents: [{
         parts: [{ text: prompt }]
       }],
       systemInstruction: {
         parts: [{ text: "You are Vivek's AI Assistant on his personal website. You should be helpful, concise, and friendly. Provide short answers that fit well in a chat window. Do not output markdown code blocks if possible, keep it conversational." }]
-      }
+      },
+      temperature: 0.4,
+      maxOutputTokens: 512
     };
 
     const res = await fetch(url, {
