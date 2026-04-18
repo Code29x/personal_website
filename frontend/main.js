@@ -851,27 +851,8 @@ async function appendBotIntroThenHtml(introPlain, htmlFragment, cps = 40) {
   scrollChatToEnd();
 }
 
-async function fetchGeminiChatResponse(query) {
-  const q = String(query).trim();
-  if (q.length < 1) return { configured: false, answer: '' };
-  try {
-    const res = await fetch('/.netlify/functions/gemini-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: q })
-    });
-    const text = await res.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return { configured: false, answer: '', error: 'bad_json' };
-    }
-    if (!res.ok) return { configured: false, answer: '', error: 'http' };
-    return data;
-  } catch {
-    return { configured: false, answer: '', error: 'network' };
-  }
+function buildGoogleSearchUrl(query) {
+  return `https://www.google.com/search?q=${encodeURIComponent(String(query).trim())}`;
 }
 
 async function appendForwardToVivekAfterAIFailure(query, errorMsg) {
@@ -914,21 +895,13 @@ async function respondChat(val) {
   const input = val.toLowerCase();
 
   if (isChatAIOpen()) {
-    const thinking = showBotThinking('Asking AI');
-    const data = await fetchGeminiChatResponse(val);
+    const thinking = showBotThinking('Searching Google');
+    const url = buildGoogleSearchUrl(val);
+    window.open(url, '_blank');
     removeNodeIfThinking(thinking);
 
-    if (data.configured === false) {
-      await appendBotPlainTyped('AI is not configured right now (Missing API Key). I will forward this message to Vivek.', 38);
-      return;
-    }
-
-    if (data.answer) {
-      await appendBotPlainTyped(data.answer, 80);
-      return;
-    }
-
-    await appendForwardToVivekAfterAIFailure(val, data.error);
+    await appendBotPlainTyped('I searched Google for you and opened the results in a new tab. Use the link below if the tab did not open automatically.', 38);
+    appendMessage(`Google Search: <a href="${url}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`, 'bot', { html: true });
     return;
   }
 
@@ -938,7 +911,7 @@ async function respondChat(val) {
     return;
   }
 
-  await appendBotPlainTyped('Please enable the AI toggle in the header to chat with my Gemini 3.1 Pro brain! Otherwise, I will forward this message to Vivek.', 38);
+  await appendBotPlainTyped('Ask me about this site or enable Search in the header to look something up on Google.', 38);
 }
 
 /** @returns {string|null} Answer from site knowledge, or null to allow web / fallback */
@@ -977,13 +950,13 @@ function getLocalAIResponse(input) {
     return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
   }
   if (input.includes('gemini') || input.includes('ai') || input.includes('chatgpt')) {
-    return "I am Vivek's AI Assistant, powered by Google Gemini 3.1 Pro! Enable the AI toggle in the header to ask me anything.";
+    return "I am Vivek's assistant. Use the Search toggle in the header to search Google for anything beyond this site.";
   }
   if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
     return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
   }
   if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
-    return "Hello! I'm Vivek's AI Assistant, powered by Gemini 3.1 Pro. Ask about Vivek's skills, projects, education, or contact — or enable AI in the header for general knowledge.";
+    return "Hello! I'm Vivek's assistant. Ask about Vivek's skills, projects, education, or enable Search in the header to look something up on Google.";
   }
 
   return null;
