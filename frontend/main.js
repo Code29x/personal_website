@@ -3,6 +3,27 @@ if (IS_EDGE_BROWSER) {
   document.body.classList.add('is-edge');
 }
 
+/* ─── TAP RIPPLE (pointer / cursor clicks) ─── */
+function spawnTapRipple(clientX, clientY) {
+  const el = document.createElement('span');
+  el.className = 'tap-ripple';
+  el.style.left = `${clientX}px`;
+  el.style.top = `${clientY}px`;
+  el.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('tap-ripple-active'));
+  setTimeout(() => el.remove(), 520);
+}
+
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (e.button !== 0) return;
+    spawnTapRipple(e.clientX, e.clientY);
+  },
+  true
+);
+
 /* ─── CURSOR ─── */
 const cursor = document.getElementById('cursor');
 const cursorRing = document.getElementById('cursor-ring');
@@ -642,8 +663,15 @@ function handleContactSubmit(e) {
   btn.style.opacity = '0.8';
   btn.style.pointerEvents = 'none';
 
-  // Simulate Network Request / EmailJS send
-  setTimeout(() => {
+  const form = document.getElementById('contact-form');
+  const formData = new FormData(form);
+
+  fetch('/', {
+    method: 'POST',
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(formData).toString()
+  })
+  .then(() => {
     // Reset btn
     btn.innerHTML = originalBtnContent;
     btn.style.opacity = '1';
@@ -654,14 +682,21 @@ function handleContactSubmit(e) {
     status.className = "form-status success";
     
     // Reset form
-    document.getElementById('contact-form').reset();
+    form.reset();
 
     // Hide status after 5s
     setTimeout(() => {
       status.style.opacity = '0';
       setTimeout(() => { status.className = "form-status"; status.textContent = ""; }, 300);
     }, 5000);
-  }, 1500);
+  })
+  .catch((error) => {
+    btn.innerHTML = originalBtnContent;
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    status.textContent = "Error sending message. Please try again.";
+    status.className = "form-status error";
+  });
 }
 
 /* ─── AI CHATBOT LOGIC ─── */
@@ -670,8 +705,35 @@ const chatbotWindow = document.getElementById('chatbot-window');
 const chatbotClose = document.getElementById('chatbot-close');
 const chatMessages = document.getElementById('chatbot-messages');
 const chatInput = document.getElementById('chat-input-field');
+const chatAIToggleEl = document.getElementById('chatbot-ai-toggle');
+const chatTitleTextEl = document.getElementById('chatbot-title-text');
 let chatbotIdleTimer = null;
 const CHATBOT_IDLE_MS = 15000;
+const CHAT_TITLE_FULL = 'Vivek AI Assistant';
+let chatTitleAnimToken = 0;
+
+function isChatAIOpen() {
+  return !!(chatAIToggleEl && chatAIToggleEl.checked);
+}
+
+function startChatbotTitleAnimation() {
+  if (!chatTitleTextEl) return;
+  const token = ++chatTitleAnimToken;
+  chatTitleTextEl.classList.add('chatbot-title-typing');
+  chatTitleTextEl.textContent = '';
+  let i = 0;
+  const step = () => {
+    if (token !== chatTitleAnimToken) return;
+    if (i <= CHAT_TITLE_FULL.length) {
+      chatTitleTextEl.textContent = CHAT_TITLE_FULL.slice(0, i);
+      i += 1;
+      setTimeout(step, i < 2 ? 100 : 42 + Math.random() * 48);
+    } else {
+      chatTitleTextEl.classList.remove('chatbot-title-typing');
+    }
+  };
+  step();
+}
 
 function closeChatbot() {
   chatbotWindow.classList.remove('open');
@@ -685,11 +747,28 @@ function resetChatbotIdleTimer() {
   }, CHATBOT_IDLE_MS);
 }
 
+function closeChatTooltip(e) {
+  if (e) e.stopPropagation();
+  const tt = document.getElementById('chatbot-tooltip');
+  if (tt) tt.classList.remove('show');
+}
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const tt = document.getElementById('chatbot-tooltip');
+    if (tt && !chatbotWindow.classList.contains('open')) {
+      tt.classList.add('show');
+    }
+  }, 2500);
+});
+
 chatbotToggle.addEventListener('click', () => {
+  closeChatTooltip();
   chatbotToggle.style.transform = 'scale(0)';
   // Pop up again after 0.2s as requested.
   setTimeout(() => {
     chatbotWindow.classList.add('open');
+    startChatbotTitleAnimation();
     chatInput.focus();
     resetChatbotIdleTimer();
   }, 200);
@@ -703,12 +782,106 @@ chatbotWindow.addEventListener('mousemove', resetChatbotIdleTimer);
 chatbotWindow.addEventListener('click', resetChatbotIdleTimer);
 chatbotWindow.addEventListener('keydown', resetChatbotIdleTimer);
 
-function appendMessage(text, sender) {
+function appendMessage(text, sender, options = {}) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${sender}-message`;
-  msgDiv.textContent = text;
+  if (options.html) {
+    msgDiv.innerHTML = text;
+  } else {
+    msgDiv.textContent = text;
+  }
   chatMessages.appendChild(msgDiv);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  return msgDiv;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function scrollChatToEnd() {
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function typewriterIntoElement(el, text, cps = 38) {
+  if (!el) return;
+  const base = 1000 / cps;
+  el.textContent = '';
+  for (let i = 1; i <= text.length; i += 1) {
+    el.textContent = text.slice(0, i);
+    scrollChatToEnd();
+    await new Promise((r) => setTimeout(r, base + Math.random() * 18));
+  }
+}
+
+async function appendBotPlainTyped(text, cps = 38) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message bot-message';
+  chatMessages.appendChild(msgDiv);
+  await typewriterIntoElement(msgDiv, text, cps);
+  scrollChatToEnd();
+}
+
+function showBotThinking(label = 'Searching Google') {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message bot-message bot-message--typing';
+  msgDiv.innerHTML = `<span class="chat-thinking">${escapeHtml(label)}<span class="chat-thinking-dots"><i></i><i></i><i></i></span></span>`;
+  chatMessages.appendChild(msgDiv);
+  scrollChatToEnd();
+  return msgDiv;
+}
+
+function removeNodeIfThinking(node) {
+  if (node && node.parentNode) node.parentNode.removeChild(node);
+}
+
+async function appendBotIntroThenHtml(introPlain, htmlFragment, cps = 40) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message bot-message';
+  const intro = document.createElement('p');
+  intro.className = 'chat-type-intro';
+  msgDiv.appendChild(intro);
+  chatMessages.appendChild(msgDiv);
+  await typewriterIntoElement(intro, introPlain, cps);
+  const shell = document.createElement('div');
+  shell.innerHTML = htmlFragment;
+  while (shell.firstChild) msgDiv.appendChild(shell.firstChild);
+  scrollChatToEnd();
+}
+
+async function fetchGeminiChatResponse(query) {
+  const q = String(query).trim();
+  if (q.length < 1) return { configured: false, answer: '' };
+  try {
+    const res = await fetch('/.netlify/functions/gemini-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: q })
+    });
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { configured: false, answer: '', error: 'bad_json' };
+    }
+    if (!res.ok) return { configured: false, answer: '', error: 'http' };
+    return data;
+  } catch {
+    return { configured: false, answer: '', error: 'network' };
+  }
+}
+
+async function appendForwardToVivekAfterAIFailure(query) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message bot-message';
+  chatMessages.appendChild(msgDiv);
+  const line =
+    "I'm sorry, I encountered an error connecting to the AI. I've forwarded this message to Vivek for a personal reply.";
+  await typewriterIntoElement(msgDiv, line, 36);
+  scrollChatToEnd();
 }
 
 function handleChatEnter(e) {
@@ -726,20 +899,63 @@ function sendChatMessage() {
   const val = chatInput.value.trim();
   if (!val) return;
   resetChatbotIdleTimer();
-  
-  // Append User message
+
   appendMessage(val, 'user');
   chatInput.value = '';
 
-  // Simulate typing delay
-  setTimeout(() => {
-    const reply = getAIResponse(val.toLowerCase());
-    appendMessage(reply, 'bot');
-  }, 600 + Math.random() * 400);
+  const delay = 520 + Math.random() * 380;
+  setTimeout(() => void respondChat(val), delay);
 }
 
-function getAIResponse(input) {
-  if (input.includes('who') || input.includes('about') || input.includes('name')) {
+async function respondChat(val) {
+  const input = val.toLowerCase();
+  const local = getLocalAIResponse(input);
+
+  if (local) {
+    await appendBotPlainTyped(local, 40);
+    return;
+  }
+
+  if (isChatAIOpen()) {
+    const thinking = showBotThinking('Asking AI');
+    const data = await fetchGeminiChatResponse(val);
+    removeNodeIfThinking(thinking);
+
+    if (data.configured === false) {
+      await appendBotPlainTyped('AI is not configured right now (Missing API Key). I will forward this message to Vivek.', 38);
+      return;
+    }
+
+    if (data.answer) {
+      await appendBotPlainTyped(data.answer, 80);
+      return;
+    }
+
+    await appendForwardToVivekAfterAIFailure(val);
+    return;
+  }
+
+  await appendBotPlainTyped('Please enable the AI toggle in the header to chat with my Gemini 3.1 Pro brain! Otherwise, I will forward this message to Vivek.', 38);
+}
+
+/** @returns {string|null} Answer from site knowledge, or null to allow web / fallback */
+function getLocalAIResponse(input) {
+  const asksPortfolio =
+    input.includes('vivek') ||
+    input.includes('portfolio') ||
+    input.includes('this site') ||
+    input.includes('your site') ||
+    input.includes('website');
+
+  const asksIdentity =
+    (asksPortfolio &&
+      (input.includes('who') || input.includes('about') || input.includes('name'))) ||
+    (input.includes('who') && (input.includes('you') || input.includes('are you'))) ||
+    input.includes('your name') ||
+    input.includes('his name') ||
+    (input.includes('name') && input.includes('vivek'));
+
+  if (asksIdentity) {
     return "I am Vivek Sharma, an 18-year-old B.Tech CSE student at Lovely Professional University. My goal is to become a skilled software developer!";
   }
   if (input.includes('project') || input.includes('built') || input.includes('made')) {
@@ -748,18 +964,26 @@ function getAIResponse(input) {
   if (input.includes('skill') || input.includes('know') || input.includes('tech')) {
     return "My skills include C, Python, HTML, CSS, and JavaScript. My core strengths are problem-solving, consistency, and a strong learning mindset.";
   }
-  if (input.includes('education') || input.includes('study') || input.includes('university') || input.includes('college') || input.includes('lpu')) {
+  if (
+    input.includes('education') ||
+    input.includes('study') ||
+    input.includes('university') ||
+    input.includes('college') ||
+    input.includes('lpu')
+  ) {
     return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
+  }
+  if (input.includes('gemini') || input.includes('ai') || input.includes('chatgpt')) {
+    return "I am Vivek's AI Assistant, powered by Google Gemini 3.1 Pro! Enable the AI toggle in the header to ask me anything.";
   }
   if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
     return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
   }
   if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
-    return "Hello! I'm Vivek's AI Assistant. You can ask me about his skills, projects, education, or how to contact him.";
+    return "Hello! I'm Vivek's AI Assistant, powered by Gemini 3.1 Pro. Ask about Vivek's skills, projects, education, or contact — or enable AI in the header for general knowledge.";
   }
-  
-  // Fallback
-  return "I will forward this message to Vivek.";
+
+  return null;
 }
 
 /* ─── LIGHTBOX LOGIC ─── */

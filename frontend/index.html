@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vivek Sharma | Portfolio</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -325,7 +325,8 @@
         </div>
 
         <div class="contact-form-section">
-          <form id="contact-form" onsubmit="handleContactSubmit(event)">
+          <form id="contact-form" name="contact" method="POST" data-netlify="true" onsubmit="handleContactSubmit(event)">
+            <input type="hidden" name="form-name" value="contact" />
             <div class="form-group">
               <label for="contact-name">Your Name</label>
               <input type="text" id="contact-name" name="name" placeholder="John Doe" required>
@@ -381,16 +382,27 @@
 
 <!-- ─── AI CHATBOT ─── -->
 <div id="chatbot-container">
+  <div id="chatbot-tooltip" class="chatbot-tooltip">
+    Hi! I am Vivek's Chatbot. What can I help you with today?
+    <button class="tooltip-close" onclick="closeChatTooltip(event)" aria-label="Close tooltip">&times;</button>
+  </div>
   <button id="chatbot-toggle" class="chatbot-toggle">
     <i class="fas fa-robot"></i>
   </button>
   
   <div class="chatbot-window" id="chatbot-window">
     <div class="chatbot-header">
-      <div class="chatbot-title">
-        <i class="fas fa-robot"></i> Vivek AI Assistant
+      <div class="chatbot-header-main">
+        <div class="chatbot-title">
+          <span class="chatbot-title-icon"><i class="fas fa-robot"></i></span>
+          <span class="chatbot-title-text" id="chatbot-title-text" aria-live="polite"></span>
+        </div>
+        <label class="chatbot-web-toggle" title="Get help from Google Gemini AI (needs Netlify env: GEMINI_API_KEY)">
+          <input type="checkbox" id="chatbot-ai-toggle" checked>
+          <span class="chatbot-web-toggle-ui"><i class="fas fa-sparkles"></i> AI</span>
+        </label>
       </div>
-      <button id="chatbot-close"><i class="fas fa-times"></i></button>
+      <button type="button" id="chatbot-close" aria-label="Close chat"><i class="fas fa-times"></i></button>
     </div>
     <div class="chatbot-messages" id="chatbot-messages">
       <div class="message bot-message">Hi! I am Vivek's AI Assistant. How can I help you today?</div>
