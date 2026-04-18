@@ -859,6 +859,72 @@ function buildWikipediaSearchUrl(query) {
   return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(String(query).trim())}`;
 }
 
+/**
+ * Public Wikipedia summary via MediaWiki API (browser CORS with origin=*).
+ * @returns {Promise<{ title: string, extract: string, pageUrl: string }|null>}
+ */
+async function fetchWikipediaSummary(query) {
+  const q = String(query).trim();
+  if (!q) return null;
+
+  const searchParams = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    list: 'search',
+    srsearch: q,
+    srlimit: '1',
+  });
+  const sres = await fetch(`https://en.wikipedia.org/w/api.php?${searchParams}`);
+  const sdata = await sres.json();
+  const hits = sdata.query && sdata.query.search;
+  if (!hits || !hits.length) return null;
+
+  const title = hits[0].title;
+  const extractParams = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    prop: 'extracts',
+    exintro: '1',
+    explaintext: '1',
+    exchars: '2000',
+    titles: title,
+  });
+  const eres = await fetch(`https://en.wikipedia.org/w/api.php?${extractParams}`);
+  const edata = await eres.json();
+  const pages = edata.query && edata.query.pages;
+  if (!pages) return null;
+  const page = Object.values(pages)[0];
+  if (!page || page.missing) {
+    return { title, extract: '', pageUrl: buildWikipediaSearchUrl(q) };
+  }
+  const extract = page.extract ? String(page.extract).trim() : '';
+  const pageUrl =
+    page.pageid != null
+      ? `https://en.wikipedia.org/?curid=${page.pageid}`
+      : buildWikipediaSearchUrl(q);
+  return { title, extract, pageUrl };
+}
+
+/** Optional Netlify function: Gemini rewrite of Wikipedia excerpt */
+async function fetchGeminiEnrich(query, context) {
+  try {
+    const res = await fetch('/.netlify/functions/gemini-enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, context }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data && data.configured && data.text) {
+      return { text: String(data.text).trim() };
+    }
+  } catch (e) {
+    /* ignore — fall back to Wikipedia text */
+  }
+  return null;
+}
+
 function handleChatEnter(e) {
   if (e.key === 'Enter') {
     sendChatMessage();
@@ -892,27 +958,61 @@ async function respondChat(val) {
   }
 
   const googleUrl = buildGoogleSearchUrl(val);
-  const wikiUrl = buildWikipediaSearchUrl(val);
-  const thinking = showBotThinking('Finding Google & Wikipedia links…');
-  await new Promise((r) => setTimeout(r, 380));
+  const thinking = showBotThinking('Looking up Wikipedia…');
+  let wiki = null;
+  try {
+    wiki = await fetchWikipediaSummary(val);
+  } catch (e) {
+    wiki = null;
+  }
   removeNodeIfThinking(thinking);
 
-  if (isChatAIOpen()) {
-    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+  if (!wiki || !wiki.extract) {
+    await appendBotPlainTyped(
+      "I could not find a clear Wikipedia match for that. Try different wording, or use the links below.",
+      36
+    );
+    const wikiUrl = buildWikipediaSearchUrl(val);
+    appendMessage(
+      `<div class="chat-web-links">` +
+        `<a class="chat-web-btn" href="${googleUrl}" target="_blank" rel="noopener noreferrer">Google Search — ${escapeHtml(val)}</a>` +
+        `<a class="chat-web-btn chat-web-btn--wiki" href="${wikiUrl}" target="_blank" rel="noopener noreferrer">Wikipedia search — ${escapeHtml(val)}</a>` +
+        `</div>`,
+      'bot',
+      { html: true }
+    );
+    return;
   }
 
-  await appendBotPlainTyped(
-    "That is not in my built-in answers about this site. Here are open web searches (no API key):",
-    36
-  );
-  appendMessage(
-    `<div class="chat-web-links">` +
-      `<a class="chat-web-btn" href="${googleUrl}" target="_blank" rel="noopener noreferrer">Google — ${escapeHtml(val)}</a>` +
-      `<a class="chat-web-btn chat-web-btn--wiki" href="${wikiUrl}" target="_blank" rel="noopener noreferrer">Wikipedia — ${escapeHtml(val)}</a>` +
-      `</div>`,
-    'bot',
-    { html: true }
-  );
+  let bodyText = wiki.extract;
+  let usedGemini = false;
+  if (isChatAIOpen()) {
+    const thinkingAi = showBotThinking('Polishing with Google Gemini…');
+    const enriched = await fetchGeminiEnrich(val, wiki.extract);
+    removeNodeIfThinking(thinkingAi);
+    if (enriched && enriched.text) {
+      bodyText = enriched.text;
+      usedGemini = true;
+    }
+  }
+
+  const maxLen = 1600;
+  if (bodyText.length > maxLen) {
+    bodyText = `${bodyText.slice(0, maxLen - 1)}…`;
+  }
+
+  const wikiLink = escapeHtml(wiki.pageUrl);
+  const googleLink = escapeHtml(googleUrl);
+  const attrLine = usedGemini
+    ? `<p class="chat-attribution">Information provided using Wikipedia as the source, with wording help from <strong>Google Gemini</strong>. Always verify important facts. Open article: <a href="${wikiLink}" target="_blank" rel="noopener noreferrer">Wikipedia</a> · Broader web: <a href="${googleLink}" target="_blank" rel="noopener noreferrer">Google Search</a>.</p>`
+    : `<p class="chat-attribution">Information provided from <strong>Wikipedia</strong> (open web). Broader results: <a href="${googleLink}" target="_blank" rel="noopener noreferrer">Google Search</a> · <a href="${wikiLink}" target="_blank" rel="noopener noreferrer">Article</a>.</p>`;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message bot-message';
+  chatMessages.appendChild(msgDiv);
+  await typewriterIntoElement(msgDiv, bodyText, 44);
+  msgDiv.insertAdjacentHTML('beforeend', attrLine);
+  scrollChatToEnd();
 }
 
 /** @returns {string|null} Answer from site knowledge, or null to allow web / fallback */
@@ -951,13 +1051,13 @@ function getLocalAIResponse(input) {
     return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
   }
   if (input.includes('gemini') || input.includes('chatgpt') || input.includes('openai')) {
-    return "This chatbot does not use external AI APIs. For other topics you get Google and Wikipedia search links instead.";
+    return "For general topics I load Wikipedia into this chat. Turn Web on and add GEMINI_API_KEY on Netlify if you want Google Gemini to shorten that text.";
   }
   if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
     return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
   }
   if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
-    return "Hello! Ask about Vivek's skills, projects, or education. For anything else I can open Google and Wikipedia for you (toggle Web to auto-open Google).";
+    return "Hello! Ask about Vivek's skills, projects, or education. For other questions I fetch Wikipedia into this chat; turn Web on for optional Google Gemini polish (needs API key on the server).";
   }
 
   return null;

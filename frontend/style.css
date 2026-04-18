@@ -1580,6 +1580,23 @@ footer span { color: var(--neon-green); }
   border-color: rgba(255, 255, 255, 0.45);
   color: #fff;
 }
+.chat-attribution {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.chat-attribution strong {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+}
+.chat-attribution a {
+  color: var(--neon-blue);
+}
 .bot-message--typing {
   font-family: 'Space Mono', monospace;
   font-size: 12px;
