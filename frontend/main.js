@@ -912,12 +912,6 @@ function sendChatMessage() {
 
 async function respondChat(val) {
   const input = val.toLowerCase();
-  const local = getLocalAIResponse(input);
-
-  if (local) {
-    await appendBotPlainTyped(local, 40);
-    return;
-  }
 
   if (isChatAIOpen()) {
     const thinking = showBotThinking('Asking AI');
@@ -935,6 +929,12 @@ async function respondChat(val) {
     }
 
     await appendForwardToVivekAfterAIFailure(val, data.error);
+    return;
+  }
+
+  const local = getLocalAIResponse(input);
+  if (local) {
+    await appendBotPlainTyped(local, 40);
     return;
   }
 
