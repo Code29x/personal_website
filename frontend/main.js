@@ -855,17 +855,8 @@ function buildGoogleSearchUrl(query) {
   return `https://www.google.com/search?q=${encodeURIComponent(String(query).trim())}`;
 }
 
-async function appendForwardToVivekAfterAIFailure(query, errorMsg) {
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'message bot-message';
-  chatMessages.appendChild(msgDiv);
-  let line = "I'm sorry, I encountered an error connecting to the AI.";
-  if (errorMsg) {
-    line += ` (Error: ${errorMsg})`;
-  }
-  line += " I've forwarded this message to Vivek for a personal reply.";
-  await typewriterIntoElement(msgDiv, line, 36);
-  scrollChatToEnd();
+function geminiChatEndpoint() {
+  return '/.netlify/functions/gemini-chat';
 }
 
 function handleChatEnter(e) {
@@ -894,24 +885,70 @@ function sendChatMessage() {
 async function respondChat(val) {
   const input = val.toLowerCase();
 
-  if (isChatAIOpen()) {
-    const thinking = showBotThinking('Searching Google');
-    const url = buildGoogleSearchUrl(val);
-    window.open(url, '_blank');
-    removeNodeIfThinking(thinking);
-
-    await appendBotPlainTyped('I searched Google for you and opened the results in a new tab. Use the link below if the tab did not open automatically.', 38);
-    appendMessage(`Google Search: <a href="${url}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`, 'bot', { html: true });
-    return;
-  }
-
   const local = getLocalAIResponse(input);
   if (local) {
     await appendBotPlainTyped(local, 40);
     return;
   }
 
-  await appendBotPlainTyped('Ask me about this site or enable Search in the header to look something up on Google.', 38);
+  const thinkingLabel = isChatAIOpen() ? 'Searching the web with Gemini…' : 'Asking Gemini…';
+  const thinking = showBotThinking(thinkingLabel);
+
+  try {
+    const res = await fetch(geminiChatEndpoint(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: val,
+        useSearch: isChatAIOpen(),
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    removeNodeIfThinking(thinking);
+
+    if (!data || data.configured === false) {
+      await appendBotPlainTyped(
+        'AI is not configured yet (missing GEMINI_API_KEY on the server). In Netlify: Site settings → Environment variables → add GEMINI_API_KEY, then redeploy. You can still search below.',
+        34
+      );
+      const url = buildGoogleSearchUrl(val);
+      appendMessage(
+        `<a href="${url}" target="_blank" rel="noopener">Open Google results for: ${escapeHtml(val)}</a>`,
+        'bot',
+        { html: true }
+      );
+      return;
+    }
+
+    if (data.error && !data.answer) {
+      await appendBotPlainTyped(
+        `Gemini could not answer (${data.error}). Try turning Search on or use the link below.`,
+        36
+      );
+      const url = buildGoogleSearchUrl(val);
+      appendMessage(
+        `<a href="${url}" target="_blank" rel="noopener">Search Google: ${escapeHtml(val)}</a>`,
+        'bot',
+        { html: true }
+      );
+      return;
+    }
+
+    await appendBotPlainTyped(data.answer || 'No reply from Gemini.', 38);
+  } catch (e) {
+    removeNodeIfThinking(thinking);
+    await appendBotPlainTyped(
+      'Could not reach the AI service. Deploy on Netlify (with functions enabled) or run `netlify dev` locally. Quick fallback:',
+      34
+    );
+    const url = buildGoogleSearchUrl(val);
+    appendMessage(
+      `<a href="${url}" target="_blank" rel="noopener">Search Google: ${escapeHtml(val)}</a>`,
+      'bot',
+      { html: true }
+    );
+  }
 }
 
 /** @returns {string|null} Answer from site knowledge, or null to allow web / fallback */
@@ -949,14 +986,14 @@ function getLocalAIResponse(input) {
   ) {
     return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
   }
-  if (input.includes('gemini') || input.includes('ai') || input.includes('chatgpt')) {
-    return "I am Vivek's assistant. Use the Search toggle in the header to search Google for anything beyond this site.";
+  if (input.includes('gemini') || input.includes('chatgpt')) {
+    return "I use Google Gemini on the server for questions that are not in my short answers. Turn Search on in the header for live web results.";
   }
   if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
     return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
   }
   if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
-    return "Hello! I'm Vivek's assistant. Ask about Vivek's skills, projects, education, or enable Search in the header to look something up on Google.";
+    return "Hello! I'm Vivek's assistant. Ask about his skills, projects, or education — or ask anything else and I'll use Gemini (turn Web on for live search).";
   }
 
   return null;
