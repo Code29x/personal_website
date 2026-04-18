@@ -855,8 +855,8 @@ function buildGoogleSearchUrl(query) {
   return `https://www.google.com/search?q=${encodeURIComponent(String(query).trim())}`;
 }
 
-function geminiChatEndpoint() {
-  return '/.netlify/functions/gemini-chat';
+function buildWikipediaSearchUrl(query) {
+  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(String(query).trim())}`;
 }
 
 function handleChatEnter(e) {
@@ -891,64 +891,28 @@ async function respondChat(val) {
     return;
   }
 
-  const thinkingLabel = isChatAIOpen() ? 'Searching the web with Gemini…' : 'Asking Gemini…';
-  const thinking = showBotThinking(thinkingLabel);
+  const googleUrl = buildGoogleSearchUrl(val);
+  const wikiUrl = buildWikipediaSearchUrl(val);
+  const thinking = showBotThinking('Finding Google & Wikipedia links…');
+  await new Promise((r) => setTimeout(r, 380));
+  removeNodeIfThinking(thinking);
 
-  try {
-    const res = await fetch(geminiChatEndpoint(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: val,
-        useSearch: isChatAIOpen(),
-      }),
-    });
-
-    const data = await res.json().catch(() => ({}));
-    removeNodeIfThinking(thinking);
-
-    if (!data || data.configured === false) {
-      await appendBotPlainTyped(
-        'AI is not configured yet (missing GEMINI_API_KEY on the server). In Netlify: Site settings → Environment variables → add GEMINI_API_KEY, then redeploy. You can still search below.',
-        34
-      );
-      const url = buildGoogleSearchUrl(val);
-      appendMessage(
-        `<a href="${url}" target="_blank" rel="noopener">Open Google results for: ${escapeHtml(val)}</a>`,
-        'bot',
-        { html: true }
-      );
-      return;
-    }
-
-    if (data.error && !data.answer) {
-      await appendBotPlainTyped(
-        `Gemini could not answer (${data.error}). Try turning Search on or use the link below.`,
-        36
-      );
-      const url = buildGoogleSearchUrl(val);
-      appendMessage(
-        `<a href="${url}" target="_blank" rel="noopener">Search Google: ${escapeHtml(val)}</a>`,
-        'bot',
-        { html: true }
-      );
-      return;
-    }
-
-    await appendBotPlainTyped(data.answer || 'No reply from Gemini.', 38);
-  } catch (e) {
-    removeNodeIfThinking(thinking);
-    await appendBotPlainTyped(
-      'Could not reach the AI service. Deploy on Netlify (with functions enabled) or run `netlify dev` locally. Quick fallback:',
-      34
-    );
-    const url = buildGoogleSearchUrl(val);
-    appendMessage(
-      `<a href="${url}" target="_blank" rel="noopener">Search Google: ${escapeHtml(val)}</a>`,
-      'bot',
-      { html: true }
-    );
+  if (isChatAIOpen()) {
+    window.open(googleUrl, '_blank', 'noopener,noreferrer');
   }
+
+  await appendBotPlainTyped(
+    "That is not in my built-in answers about this site. Here are open web searches (no API key):",
+    36
+  );
+  appendMessage(
+    `<div class="chat-web-links">` +
+      `<a class="chat-web-btn" href="${googleUrl}" target="_blank" rel="noopener noreferrer">Google — ${escapeHtml(val)}</a>` +
+      `<a class="chat-web-btn chat-web-btn--wiki" href="${wikiUrl}" target="_blank" rel="noopener noreferrer">Wikipedia — ${escapeHtml(val)}</a>` +
+      `</div>`,
+    'bot',
+    { html: true }
+  );
 }
 
 /** @returns {string|null} Answer from site knowledge, or null to allow web / fallback */
@@ -986,14 +950,14 @@ function getLocalAIResponse(input) {
   ) {
     return "I am currently pursuing my B.Tech in Computer Science Engineering at Lovely Professional University (LPU).";
   }
-  if (input.includes('gemini') || input.includes('chatgpt')) {
-    return "I use Google Gemini on the server for questions that are not in my short answers. Turn Search on in the header for live web results.";
+  if (input.includes('gemini') || input.includes('chatgpt') || input.includes('openai')) {
+    return "This chatbot does not use external AI APIs. For other topics you get Google and Wikipedia search links instead.";
   }
   if (input.includes('contact') || input.includes('email') || input.includes('reach') || input.includes('hire')) {
     return "You can reach me via email at viveklpu008@gmail.com or by using the contact form in the Contact section below!";
   }
   if (input.includes('hi') || input.includes('hello') || input.includes('hey')) {
-    return "Hello! I'm Vivek's assistant. Ask about his skills, projects, or education — or ask anything else and I'll use Gemini (turn Web on for live search).";
+    return "Hello! Ask about Vivek's skills, projects, or education. For anything else I can open Google and Wikipedia for you (toggle Web to auto-open Google).";
   }
 
   return null;

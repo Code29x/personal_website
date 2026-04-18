@@ -1547,6 +1547,39 @@ footer span { color: var(--neon-green); }
 .bot-message .chat-sources { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: rgba(255,255,255,0.45); }
 .bot-message .chat-sources ul { margin: 8px 0 0; padding-left: 18px; list-style: disc; }
 .bot-message .chat-sources li { margin: 4px 0; }
+.chat-web-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.chat-web-btn {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--neon-blue);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+  transition: border-color 0.2s, background 0.2s;
+}
+.chat-web-btn:hover {
+  border-color: var(--neon-green);
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--neon-green);
+}
+.chat-web-btn--wiki {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+}
+.chat-web-btn--wiki:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #fff;
+}
 .bot-message--typing {
   font-family: 'Space Mono', monospace;
   font-size: 12px;
